@@ -37,7 +37,7 @@ class BPlusTreePage {
 };
 
 // NOLINTNEXTLINE
-TEST(TypeTests, InvalidTypeTest) {
+TEST(TypeTests, DISABLED_InvalidTypeTest) {
   // First get the INVALID type instance
   TypeId type_id = TypeId::INVALID;
   auto t = Type::GetInstance(type_id);
@@ -53,7 +53,7 @@ TEST(TypeTests, InvalidTypeTest) {
 }
 
 // NOLINTNEXTLINE
-TEST(TypeTests, GetInstanceTest) {
+TEST(TypeTests, DISABLED_GetInstanceTest) {
   for (auto col_type : TYPE_TEST_TYPES) {
     auto t = Type::GetInstance(col_type);
     EXPECT_NE(nullptr, t);
@@ -63,7 +63,7 @@ TEST(TypeTests, GetInstanceTest) {
 }
 
 // NOLINTNEXTLINE
-TEST(TypeTests, MaxValueTest) {
+TEST(TypeTests, DISABLED_MaxValueTest) {
   for (auto col_type : TYPE_TEST_TYPES) {
     auto max_val = Type::GetMaxValue(col_type);
     EXPECT_FALSE(max_val.IsNull());
@@ -73,7 +73,7 @@ TEST(TypeTests, MaxValueTest) {
 }
 
 // NOLINTNEXTLINE
-TEST(TypeTests, MinValueTest) {
+TEST(TypeTests, DISABLED_MinValueTest) {
   for (auto col_type : TYPE_TEST_TYPES) {
     auto min_val = Type::GetMinValue(col_type);
     EXPECT_FALSE(min_val.IsNull());
@@ -87,7 +87,7 @@ TEST(TypeTests, MinValueTest) {
 }
 
 // NOLINTNEXTLINE
-TEST(TypeTests, TemplateTest) {
+TEST(TypeTests, DISABLED_TemplateTest) {
   std::string temp = "32";
   Value val1(TypeId::INTEGER, 32);
   Value val2(TypeId::INTEGER, 32);

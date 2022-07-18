@@ -40,7 +40,7 @@ class Counter {
 };
 
 // NOLINTNEXTLINE
-TEST(RWLatchTest, BasicTest) {
+TEST(RWLatchTest, DISABLED_BasicTest) {
   int num_threads = 100;
   Counter counter{};
   counter.Add(5);

@@ -89,13 +89,13 @@ install_linux() {
   # Install packages.
   apt-get -y install \
       build-essential \
-      clang-12 \
-      clang-format-12 \
-      clang-tidy-12 \
+      clang-13 \
+      clang-format-13 \
+      clang-tidy-13 \
       cmake \
       doxygen \
       git \
-      g++-12 \
+      g++-13 \
       pkg-config \
       valgrind \
       zlib1g-dev
