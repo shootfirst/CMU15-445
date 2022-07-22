@@ -85,6 +85,12 @@ class HashTableBucketPage {
    */
   void RemoveAt(uint32_t bucket_idx);
 
+  // my add
+  /**
+   * get the first no-occupied bucket_idx
+   */
+  auto GetFirstNoOcpBkt() const -> size_t;
+
   /**
    * Returns whether or not an index is occupied (key/value pair or tombstone)
    *
@@ -101,6 +107,15 @@ class HashTableBucketPage {
    */
   void SetOccupied(uint32_t bucket_idx);
 
+  // my add
+  /**
+   * SetNoOccupied - Updates the bitmap to indicate that the entry at
+   * bucket_idx is not occupied. Warning! This method is only called by extendible_hash_table in split method!
+   *
+   * @param bucket_idx the index to update
+   */
+  void SetNoOccupied(uint32_t bucket_idx);
+
   /**
    * Returns whether or not an index is readable (valid key/value pair)
    *
@@ -116,6 +131,15 @@ class HashTableBucketPage {
    * @param bucket_idx the index to update
    */
   void SetReadable(uint32_t bucket_idx);
+
+  // my add
+  /**
+   * SetNoReadable - Updates the bitmap to indicate that the entry at
+   * bucket_idx is not readable.
+   *
+   * @param bucket_idx the index to update
+   */
+  void SetNoReadable(uint32_t bucket_idx);
 
   /**
    * @return the number of readable elements, i.e. current size
@@ -142,7 +166,9 @@ class HashTableBucketPage {
   char occupied_[(BUCKET_ARRAY_SIZE - 1) / 8 + 1];
   // 0 if tombstone/brand new (never occupied), 1 otherwise.
   char readable_[(BUCKET_ARRAY_SIZE - 1) / 8 + 1];
+
   MappingType array_[1];
+  // MappingType array_[0];
 };
 
 }  // namespace bustub

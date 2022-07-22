@@ -9,8 +9,8 @@
 // Copyright (c) 2015-2021, Carnegie Mellon University Database Group
 //
 //===----------------------------------------------------------------------===//
-#include "common/logger.h"
 #include "buffer/parallel_buffer_pool_manager.h"
+#include "common/logger.h"
 
 namespace bustub {
 
@@ -27,9 +27,8 @@ ParallelBufferPoolManager::ParallelBufferPoolManager(size_t num_instances, size_
 }
 
 // Update constructor to destruct all BufferPoolManagerInstances and deallocate any associated memory
-ParallelBufferPoolManager::~ParallelBufferPoolManager()
-{
-  for (size_t i = 0; i < num_instances_; i ++) {
+ParallelBufferPoolManager::~ParallelBufferPoolManager() {
+  for (size_t i = 0; i < num_instances_; i++) {
     delete instance_vec_[i];
   }
 }
@@ -85,7 +84,6 @@ auto ParallelBufferPoolManager::NewPgImp(page_id_t *page_id) -> Page * {
   }
   starting_index_++;
   return nullptr;
-
 }
 
 auto ParallelBufferPoolManager::DeletePgImp(page_id_t page_id) -> bool {

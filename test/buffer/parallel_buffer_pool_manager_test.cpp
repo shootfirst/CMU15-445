@@ -33,8 +33,6 @@
 
 //   auto *disk_manager = new DiskManager(db_name);
 
-
-
 //   auto *bpm = new ParallelBufferPoolManager(num_instances, buffer_pool_size, disk_manager);
 //   page_id_t page_id_temp;
 //   auto *page0 = bpm->NewPage(&page_id_temp);

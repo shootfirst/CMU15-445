@@ -87,7 +87,7 @@ auto BufferPoolManagerInstance::NewPgImp(page_id_t *page_id) -> Page * {
       break;
     }
   }
-  
+
   if (!if_free_pages) {
     latch_.unlock();
     return nullptr;
@@ -96,7 +96,7 @@ auto BufferPoolManagerInstance::NewPgImp(page_id_t *page_id) -> Page * {
   *page_id = AllocatePage();
   frame_id_t free_id;
   // Always pick from the free list first
-  
+
   if (!free_list_.empty()) {
     free_id = free_list_.front();
     free_list_.pop_front();
@@ -141,6 +141,14 @@ auto BufferPoolManagerInstance::FetchPgImp(page_id_t page_id) -> Page * {
   // Search the page table for the requested page (P).
 
   latch_.lock();
+  // for (size_t i = 0; i < pool_size_; i++) {
+  //   auto pin_cnt = pages_[i].GetPinCount();
+  //   if (pin_cnt != 0) {
+  //     LOG_DEBUG("fetch %d, %d pinned", (int)page_id, (int)pages_[i].GetPageId());
+  //   }
+  // }
+  // LOG_DEBUG("============================");
+
   for (auto &it : page_table_) {
     if (it.first == page_id) {
       pages_[it.second].pin_count_++;
@@ -194,7 +202,6 @@ auto BufferPoolManagerInstance::FetchPgImp(page_id_t page_id) -> Page * {
   auto res = &pages_[free_id];
   latch_.unlock();
   return res;
-
 }
 
 auto BufferPoolManagerInstance::DeletePgImp(page_id_t page_id) -> bool {
@@ -226,7 +233,6 @@ auto BufferPoolManagerInstance::DeletePgImp(page_id_t page_id) -> bool {
   pages_[frameid].pin_count_ = 0;
   pages_[frameid].is_dirty_ = false;
 
-
   page_table_.erase(page_id);
 
   free_list_.push_back(frameid);
@@ -235,7 +241,6 @@ auto BufferPoolManagerInstance::DeletePgImp(page_id_t page_id) -> bool {
 }
 
 auto BufferPoolManagerInstance::UnpinPgImp(page_id_t page_id, bool is_dirty) -> bool {
-  
   latch_.lock();
   if (page_table_.find(page_id) == page_table_.end()) {
     latch_.unlock();
@@ -245,7 +250,7 @@ auto BufferPoolManagerInstance::UnpinPgImp(page_id_t page_id, bool is_dirty) -> 
   if (is_dirty) {
     pages_[frameid].is_dirty_ = true;
   }
-  
+
   if (pages_[frameid].pin_count_ <= 0) {
     latch_.unlock();
     return false;
@@ -256,7 +261,6 @@ auto BufferPoolManagerInstance::UnpinPgImp(page_id_t page_id, bool is_dirty) -> 
   }
   latch_.unlock();
   return true;
-  
 }
 
 auto BufferPoolManagerInstance::AllocatePage() -> page_id_t {

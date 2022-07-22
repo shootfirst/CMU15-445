@@ -19,7 +19,6 @@ LRUReplacer::LRUReplacer(size_t num_pages) { num_pages_ = num_pages; }
 LRUReplacer::~LRUReplacer() = default;
 
 auto LRUReplacer::Victim(frame_id_t *frame_id) -> bool {
-  
   if (frame_map_.empty()) {
     return false;
   }
@@ -37,7 +36,6 @@ void LRUReplacer::Pin(frame_id_t frame_id) {
   if (it != frame_map_.end()) {
     frame_vec_.erase(it->second);
     frame_map_.erase(it);
-    
   }
 }
 
