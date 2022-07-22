@@ -58,7 +58,44 @@ cpp的这个注释我一开始是不知道的，输出参数。即虽然这个�
 
 ## lab2
 
-实验二是实现extendible哈希表，其实我更像写b+树的，可惜这个好像是2020年的，以后有机会写一下。
+实验二是实现extendible哈希表，其实我更想写b+树的，可惜这个好像是2020年的，以后有机会写一下。
+
+三个子任务，一开始是高估的第一个子任务的难度，其实看测试文件，只需要实现一点点即可。
+
+
+### PAGE LAYOUTS
+
+#### DIRECTORY
+
+第一个就是directory的IncrGlobalDepth()，不仅仅是简单的加深度即可，还要注意复制前一半的pageid和深度到后一半，当然你去上层去实现这个机理也可。第二个就是GetSplitImageIndex，
+这里的SplitImage概念指导书说自己自然而然会明白，我解释一下，举个栗子，xxxxx1000的SplitImage是xxxxx0000，x的位数是globaldepth-localdepth，代表0或者1，而数字的位数则是
+localdepth。所以获取SplitImage是bucket_idx ^ (1 << (local_depths_[bucket_idx] - 1))。这里获取的是其中一个镜像，这里注意深度为0时调用此方法会报错！！！这里还得区分一下镜像
+(SplitImage)和镜像族，镜像是镜像族的一个，我这里获取的镜像是只有第localdepth位不同，其他都相同，而镜像族则是所有localdepth-1位都相同，但是第localdepth位不同的所有index集合
+(最高位限制到globaldepth位)，在分裂和合并时镜像族的概念非常重要！！！
+
+#### BUCKET
+
+bucket的删除，删除是位删除，只需要将readable设为0即可，occupied不需置位。最后就是0(1)长数组，这个自行google。
+
+
+### HASH TABLE IMPLEMENTATION
+
+这个是重点。我提一下fetch和new的调用时机，还有就是flite和merge的思路机理
+
+
+#### FETCH AND NEW
+
+directory_page_id_在构造方法中需要调用new方法新建一个page，将directory的内容写入其中。bucket的page在构造方法中也需要首先先new一个，将pageid号写入directory中。还有就是在分
+裂flite时需要生成新的bucket，此时也需要调用new方法，其他的任何时机，只需要调用fetch方法！！！如果不这样，会导致你的数据不一致，还有很多奇奇怪怪的错误！！！还有就是每一个
+fetch或者new必须要即时unpin，否则会内存溢出。
+
+#### FLITER
+
+
+
+#### MERGE
+
+
 
 
 
