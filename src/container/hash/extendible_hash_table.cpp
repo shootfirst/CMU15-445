@@ -28,10 +28,7 @@ HASH_TABLE_TYPE::ExtendibleHashTable(const std::string &name, BufferPoolManager 
     : buffer_pool_manager_(buffer_pool_manager), comparator_(comparator), hash_fn_(std::move(hash_fn)) {
   //  implement me!
 
-  if (buffer_pool_manager_->NewPage(&directory_page_id_, nullptr) == nullptr) {
-    LOG_DEBUG("directory_page can not create ! there is no frame to unpin!!!");
-    exit(0);
-  }
+  buffer_pool_manager->NewPage(&directory_page_id_, nullptr);
   // LOG_DEBUG("new page %d", (int)directory_page_id_);
   buffer_pool_manager->UnpinPage(directory_page_id_, true);
 
@@ -39,25 +36,21 @@ HASH_TABLE_TYPE::ExtendibleHashTable(const std::string &name, BufferPoolManager 
 
   page_id_t bucket_page_id = 0;
 
-  if (buffer_pool_manager_->NewPage(&bucket_page_id, nullptr) == nullptr) {
-    LOG_DEBUG("bucket_page index %d can not create ! there is no frame to unpin!!!", 0);
-    exit(0);
-  }
-
+  buffer_pool_manager_->NewPage(&bucket_page_id, nullptr)->GetData();
   // LOG_DEBUG("new page %d", (int)bucket_page_id);
   directory_page->SetBucketPageId(0, bucket_page_id);
 
   buffer_pool_manager->UnpinPage(directory_page_id_, true);
   buffer_pool_manager->UnpinPage(bucket_page_id, false);
 
-  LOG_DEBUG("++++++++++++++++++++++++++++++++++++++++++++++");
-  std::ifstream file("/autograder/bustub/test/container/grading_hash_table_verification_test.cpp");
-  std::string str;
-  while (file.good()) {
-    std::getline(file, str);
-    std::cout << str << std::endl;
-  }
-  LOG_DEBUG("++++++++++++++++++++++++++++++++++++++++++++++");
+  // LOG_DEBUG("++++++++++++++++++++++++++++++++++++++++++++++");
+  // std::ifstream file("/autograder/bustub/test/container/grading_hash_table_verification_test.cpp");
+  // std::string str;
+  // while (file.good()) {
+  //   std::getline(file, str);
+  //   std::cout << str << std::endl;
+  // }
+  // LOG_DEBUG("++++++++++++++++++++++++++++++++++++++++++++++");
 }
 
 /*****************************************************************************
@@ -89,26 +82,13 @@ inline auto HASH_TABLE_TYPE::KeyToPageId(KeyType key, HashTableDirectoryPage *di
 // this method should be called after the directory_page_id_ is newed, and should unpin after using directory page
 template <typename KeyType, typename ValueType, typename KeyComparator>
 auto HASH_TABLE_TYPE::FetchDirectoryPage() -> HashTableDirectoryPage * {
-  auto page = buffer_pool_manager_->FetchPage(directory_page_id_, nullptr);
-
-  if (page == nullptr) {
-    LOG_DEBUG("directory_page can not fetch ! there is no frame to unpin!!!");
-    exit(0);
-  }
-
-  return reinterpret_cast<HashTableDirectoryPage *>(page->GetData());
+  return reinterpret_cast<HashTableDirectoryPage *>(
+      buffer_pool_manager_->FetchPage(directory_page_id_, nullptr)->GetData());
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 auto HASH_TABLE_TYPE::FetchBucketPage(page_id_t bucket_page_id) -> HASH_TABLE_BUCKET_TYPE * {
-  auto page = buffer_pool_manager_->FetchPage(bucket_page_id, nullptr);
-
-  if (page == nullptr) {
-    LOG_DEBUG("bucket_page_id %d can not fetch ! there is no frame to unpin!!!", bucket_page_id);
-    exit(0);
-  }
-
-  return reinterpret_cast<HASH_TABLE_BUCKET_TYPE *>(page->GetData());
+  return nullptr;
 }
 
 /*****************************************************************************
@@ -116,23 +96,23 @@ auto HASH_TABLE_TYPE::FetchBucketPage(page_id_t bucket_page_id) -> HASH_TABLE_BU
  *****************************************************************************/
 template <typename KeyType, typename ValueType, typename KeyComparator>
 auto HASH_TABLE_TYPE::GetValue(Transaction *transaction, const KeyType &key, std::vector<ValueType> *result) -> bool {
-  auto directory_page = FetchDirectoryPage();
-
   table_latch_.RLock();
+  auto directory_page = FetchDirectoryPage();
 
   uint32_t bucket_idx = KeyToDirectoryIndex(key, directory_page);
 
   page_id_t bucket_page_id = directory_page->GetBucketPageId(bucket_idx);
 
-  auto bucket_page = FetchBucketPage(bucket_page_id);
+  auto bucket_page = reinterpret_cast<HashTableBucketPage<KeyType, ValueType, KeyComparator> *>(
+      buffer_pool_manager_->FetchPage(bucket_page_id, nullptr)->GetData());
 
   auto res = bucket_page->GetValue(key, comparator_, result);
-
-  table_latch_.RUnlock();
 
   buffer_pool_manager_->UnpinPage(directory_page_id_, false);
 
   buffer_pool_manager_->UnpinPage(bucket_page_id, false);
+
+  table_latch_.RUnlock();
 
   return res;
 }
@@ -144,19 +124,23 @@ template <typename KeyType, typename ValueType, typename KeyComparator>
 auto HASH_TABLE_TYPE::Insert(Transaction *transaction, const KeyType &key, const ValueType &value) -> bool {
   // auto kkk = reinterpret_cast<const int *>(&key);
   // LOG_DEBUG("%d th", *kkk);
+  table_latch_.WLock();
 
   auto directory_page = FetchDirectoryPage();
 
   // table_latch_.RLock();
-  table_latch_.WLock();
 
   uint32_t bucket_idx = KeyToDirectoryIndex(key, directory_page);
 
   page_id_t bucket_page_id = directory_page->GetBucketPageId(bucket_idx);
 
-  auto bucket_page = FetchBucketPage(bucket_page_id);
+  auto bucket_page = reinterpret_cast<HashTableBucketPage<KeyType, ValueType, KeyComparator> *>(
+      buffer_pool_manager_->FetchPage(bucket_page_id, nullptr)->GetData());
+  // LOG_DEBUG("bad data %d  %d", (int)bucket_idx, (int)bucket_page_id);
 
-  if (bucket_page->IsFull()) {
+  auto res = bucket_page->Insert(key, value, comparator_);
+  // LOG_DEBUG("res %d", (int)res);
+  if (!res && bucket_page->IsFull()) {
     // auto kkk = reinterpret_cast<const int *>(&key);
     // LOG_DEBUG("%d th", *kkk);
 
@@ -175,14 +159,13 @@ auto HASH_TABLE_TYPE::Insert(Transaction *transaction, const KeyType &key, const
     return res;
   }
 
-  auto res = bucket_page->Insert(key, value, comparator_);
-
   // table_latch_.RUnlock();
-  table_latch_.WUnlock();
 
   buffer_pool_manager_->UnpinPage(directory_page_id_, false);
 
   buffer_pool_manager_->UnpinPage(bucket_page_id, res);
+
+  table_latch_.WUnlock();
 
   return res;
 }
@@ -194,12 +177,21 @@ auto HASH_TABLE_TYPE::SplitInsert(Transaction *transaction, const KeyType &key, 
 
   page_id_t bucket_page_id = directory_page->GetBucketPageId(bucket_idx);
 
-  auto bucket_page = FetchBucketPage(bucket_page_id);
+  auto bucket_page = reinterpret_cast<HashTableBucketPage<KeyType, ValueType, KeyComparator> *>(
+      buffer_pool_manager_->FetchPage(bucket_page_id, nullptr)->GetData());
 
   page_id_t to_unpin_final = bucket_page_id;
   while (bucket_page->IsFull()) {
     // increase global depth
+
     if (directory_page->GetGlobalDepth() == directory_page->GetLocalDepth(bucket_idx)) {
+      LOG_DEBUG("global depth is %d", (int)directory_page->GetGlobalDepth());
+      if (!directory_page->CanIncr()) {
+        buffer_pool_manager_->UnpinPage(directory_page_id_, true);
+        buffer_pool_manager_->UnpinPage(bucket_page_id, true);
+        LOG_DEBUG("the hash_table can not increase any more!!!");
+        exit(0);
+      }
       directory_page->IncrGlobalDepth();
     }
 
@@ -218,16 +210,9 @@ auto HASH_TABLE_TYPE::SplitInsert(Transaction *transaction, const KeyType &key, 
     uint32_t image = directory_page->GetSplitImageIndex(bucket_idx);
     page_id_t image_page_id = 0;
 
-    auto page = buffer_pool_manager_->NewPage(&image_page_id, nullptr);
-
-    if (page == nullptr) {
-      LOG_DEBUG("bucket_page index %d can not create ! there is no frame to unpin!!!", image);
-      exit(0);
-    }
-
-    auto image_page = reinterpret_cast<HASH_TABLE_BUCKET_TYPE *>(page->GetData());
-
-    // LOG_DEBUG("new page %d", (int)image_page_id);
+    auto image_page = reinterpret_cast<HashTableBucketPage<KeyType, ValueType, KeyComparator> *>(
+        buffer_pool_manager_->NewPage(&image_page_id, nullptr)->GetData());
+    LOG_DEBUG("new page %d", (int)image_page_id);
     // LOG_DEBUG("%d th > : %d", *kkk, (int)image_page_id);
 
     // set the image image_page_id
@@ -292,20 +277,33 @@ auto HASH_TABLE_TYPE::SplitInsert(Transaction *transaction, const KeyType &key, 
   return res;
 }
 
+// template <typename KeyType, typename ValueType, typename KeyComparator>
+// auto HASH_TABLE_TYPE::GetAllREad() -> uint32_t {
+//   auto directory_page = FetchDirectoryPage();
+//   int size = (int)directory_page->Size();
+//   uint32_t res = 0;
+//   for (int i = 0; i < size; i++) {
+
+//   }
+
+// }
+
 /*****************************************************************************
  * REMOVE
  *****************************************************************************/
 template <typename KeyType, typename ValueType, typename KeyComparator>
 auto HASH_TABLE_TYPE::Remove(Transaction *transaction, const KeyType &key, const ValueType &value) -> bool {
+  table_latch_.WLock();
+
   auto directory_page = FetchDirectoryPage();
 
   // table_latch_.RLock();
-  table_latch_.WLock();
   uint32_t bucket_idx = KeyToDirectoryIndex(key, directory_page);
 
   page_id_t bucket_page_id = directory_page->GetBucketPageId(bucket_idx);
 
-  auto bucket_page = FetchBucketPage(bucket_page_id);
+  auto bucket_page = reinterpret_cast<HashTableBucketPage<KeyType, ValueType, KeyComparator> *>(
+      buffer_pool_manager_->FetchPage(bucket_page_id, nullptr)->GetData());
 
   auto res = bucket_page->Remove(key, value, comparator_);
 
@@ -316,21 +314,22 @@ auto HASH_TABLE_TYPE::Remove(Transaction *transaction, const KeyType &key, const
 
     Merge(transaction, key, value);
 
-    table_latch_.WUnlock();
-
     buffer_pool_manager_->UnpinPage(directory_page_id_, true);
 
     buffer_pool_manager_->UnpinPage(bucket_page_id, true);
+
+    table_latch_.WUnlock();
 
     return res;
   }
 
   // table_latch_.RUnlock();
-  table_latch_.WUnlock();
 
   buffer_pool_manager_->UnpinPage(directory_page_id_, false);
 
   buffer_pool_manager_->UnpinPage(bucket_page_id, res);
+
+  table_latch_.WUnlock();
 
   return res;
 }
@@ -353,7 +352,8 @@ void HASH_TABLE_TYPE::Merge(Transaction *transaction, const KeyType &key, const 
   page_id_t bucket_page_id = directory_page->GetBucketPageId(bucket_idx);
 
   // get bucket page ,the bucket id and the bucket page is cycle variable, bucket page might be empty
-  auto bucket_page = FetchBucketPage(bucket_page_id);
+  auto bucket_page = reinterpret_cast<HashTableBucketPage<KeyType, ValueType, KeyComparator> *>(
+      buffer_pool_manager_->FetchPage(bucket_page_id, nullptr)->GetData());
 
   uint32_t image_idx = directory_page->GetSplitImageIndex(bucket_idx);
 
@@ -387,6 +387,7 @@ void HASH_TABLE_TYPE::Merge(Transaction *transaction, const KeyType &key, const 
 
     // unpin
     buffer_pool_manager_->UnpinPage(bucket_page_id, false);
+    LOG_DEBUG("unpin page %d", (int)bucket_page_id);
 
     if (directory_page->GetLocalDepth(image_idx) == 0) {
       break;

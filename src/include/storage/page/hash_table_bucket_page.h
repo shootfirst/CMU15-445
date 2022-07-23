@@ -91,6 +91,13 @@ class HashTableBucketPage {
    */
   auto GetFirstNoOcpBkt() const -> size_t;
 
+  // my add
+  /**
+   * get the first no-readable bucket_idx
+   */
+
+  auto GetFirstNoReadBkt() const -> size_t;
+
   /**
    * Returns whether or not an index is occupied (key/value pair or tombstone)
    *

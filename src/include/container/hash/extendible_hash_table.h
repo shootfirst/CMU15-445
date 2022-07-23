@@ -84,6 +84,13 @@ class ExtendibleHashTable {
    */
   void VerifyIntegrity();
 
+  /**
+   * Fetches the directory page from the buffer pool manager.
+   *
+   * @return a pointer to the directory page
+   */
+  auto FetchDirectoryPage() -> HashTableDirectoryPage *;
+
  private:
   /**
    * Hash - simple helper to downcast MurmurHash's 64-bit hash to 32-bit
@@ -120,13 +127,6 @@ class ExtendibleHashTable {
    * @return the bucket page_id corresponding to the input key
    */
   inline auto KeyToPageId(KeyType key, HashTableDirectoryPage *dir_page) -> uint32_t;
-
-  /**
-   * Fetches the directory page from the buffer pool manager.
-   *
-   * @return a pointer to the directory page
-   */
-  auto FetchDirectoryPage() -> HashTableDirectoryPage *;
 
   /**
    * Fetches the a bucket page from the buffer pool manager using the bucket's page_id.
@@ -169,6 +169,8 @@ class ExtendibleHashTable {
   // Readers includes inserts and removes, writers are splits and merges
   ReaderWriterLatch table_latch_;
   HashFunction<KeyType> hash_fn_;
+
+  std::mutex latch_;
 };
 
 }  // namespace bustub

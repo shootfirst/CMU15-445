@@ -107,8 +107,10 @@ void DiskManager::ReadPage(page_id_t page_id, char *page_data) {
   std::scoped_lock scoped_db_io_latch(db_io_latch_);
   int offset = page_id * PAGE_SIZE;
   // check if read beyond file length
+
   if (offset > GetFileSize(file_name_)) {
-    LOG_DEBUG("I/O error reading past end of file");
+    LOG_DEBUG("GetFileSize(file_name_) %d offset %d", GetFileSize(file_name_), offset);
+    LOG_DEBUG("I/O error reading past end of file %d", (int)page_id);
     // std::cerr << "I/O error while reading" << std::endl;
   } else {
     // set read cursor to offset
@@ -121,7 +123,7 @@ void DiskManager::ReadPage(page_id_t page_id, char *page_data) {
     // if file ends before reading PAGE_SIZE
     int read_count = db_io_.gcount();
     if (read_count < PAGE_SIZE) {
-      LOG_DEBUG("Read less than a page");
+      LOG_DEBUG("Read less than a page %d", (int)page_id);
       db_io_.clear();
       // std::cerr << "Read less than a page" << std::endl;
       memset(page_data + read_count, 0, PAGE_SIZE - read_count);

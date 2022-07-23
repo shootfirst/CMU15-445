@@ -26,11 +26,12 @@
 // // NOLINTNEXTLINE
 // TEST(HashTableTest, SampleTest) {
 //   auto *disk_manager = new DiskManager("test.db");
-//   auto *bpm = new BufferPoolManagerInstance(50, disk_manager);
+//   auto *bpm = new BufferPoolManagerInstance(4, disk_manager);
 //   ExtendibleHashTable<int, int, IntComparator> ht("blah", bpm, IntComparator(), HashFunction<int>());
 
+//   int num = 100000;
 //   // insert a few values
-//   for (int i = 0; i < 100000; i++) {
+//   for (int i = 0; i < num; i++) {
 //     ht.Insert(nullptr, i, i);
 //     std::vector<int> res;
 //     ht.GetValue(nullptr, i, &res);
@@ -41,7 +42,7 @@
 //   ht.VerifyIntegrity();
 
 //   // check if the inserted values are all there
-//   for (int i = 0; i < 100000; i++) {
+//   for (int i = 0; i < num; i++) {
 //     std::vector<int> res;
 //     ht.GetValue(nullptr, i, &res);
 //     EXPECT_EQ(1, res.size()) << "Failed to keep " << i << std::endl;
@@ -50,7 +51,7 @@
 //   ht.VerifyIntegrity();
 
 //   // insert one more value for each key
-//   for (int i = 0; i < 100000; i++) {
+//   for (int i = 0; i < num; i++) {
 //     if (i == 0) {
 //       // duplicate values for the same key are not allowed
 //       EXPECT_FALSE(ht.Insert(nullptr, i, 2 * i));
@@ -78,11 +79,11 @@
 
 //   // look for a key that does not exist
 //   std::vector<int> res;
-//   ht.GetValue(nullptr, 200000, &res);
+//   ht.GetValue(nullptr, num * 2, &res);
 //   EXPECT_EQ(0, res.size());
 
 //   // delete some values
-//   for (int i = 0; i < 100000; i++) {
+//   for (int i = 0; i < num; i++) {
 //     EXPECT_TRUE(ht.Remove(nullptr, i, i));
 //     std::vector<int> res;
 //     ht.GetValue(nullptr, i, &res);
@@ -96,7 +97,7 @@
 //   }
 //   ht.VerifyIntegrity();
 //   // delete all values
-//   for (int i = 0; i < 100000; i++) {
+//   for (int i = 0; i < num; i++) {
 //     if (i == 0) {
 //       // (0, 0) has been deleted
 //       EXPECT_FALSE(ht.Remove(nullptr, i, 2 * i));
@@ -248,19 +249,27 @@ void ConcurrentScaleTest() {
   InsertHelper(&hash_table, perserved_keys, 1);
   size_t size;
 
+  // InsertHelper(&hash_table, dynamic_keys, 1);
+  // DeleteHelper(&hash_table, dynamic_keys, 1);
+  // LookupHelper(&hash_table, perserved_keys, 1);
+  // InsertHelper(&hash_table, dynamic_keys, 1);
+  // DeleteHelper(&hash_table, dynamic_keys, 1);
+  // LookupHelper(&hash_table, perserved_keys, 1);
+
   auto insert_task = [&](int tid) { InsertHelper(&hash_table, dynamic_keys, tid); };
-  auto delete_task = [&](int tid) { DeleteHelper(&hash_table, dynamic_keys, tid); };
-  auto lookup_task = [&](int tid) { LookupHelper(&hash_table, perserved_keys, tid); };
+  // auto delete_task = [&](int tid) { DeleteHelper(&hash_table, dynamic_keys, tid); };
+  // auto lookup_task = [&](int tid) { LookupHelper(&hash_table, perserved_keys, tid); };
 
   std::vector<std::thread> threads;
-  std::vector<std::function<void(int)>> tasks;
-  tasks.emplace_back(insert_task);
-  tasks.emplace_back(delete_task);
-  tasks.emplace_back(lookup_task);
+  // std::vector<std::function<void(int)>> tasks;
+  // tasks.emplace_back(insert_task);
+  // tasks.emplace_back(delete_task);
+  // tasks.emplace_back(lookup_task);
 
-  size_t num_threads = 6;
+  size_t num_threads = 2;
   for (size_t i = 0; i < num_threads; i++) {
-    threads.emplace_back(std::thread{tasks[i % tasks.size()], i});
+    // threads.emplace_back(std::thread{tasks[i % tasks.size()], i});
+    threads.emplace_back(std::thread{insert_task, i});
   }
   for (size_t i = 0; i < num_threads; i++) {
     threads[i].join();
@@ -290,114 +299,6 @@ void ConcurrentScaleTest() {
   remove("test.db");
   remove("test.log");
 }
-
-void ScaleTestCall() {
-  auto *disk_manager = new DiskManager("test.db");
-  auto *bpm = new BufferPoolManagerInstance(4, disk_manager);
-  ExtendibleHashTable<int, int, IntComparator> ht("foo_pk", bpm, IntComparator(), HashFunction<int>());
-
-  int num_keys = 100000;  // index can fit around 225k int-int pairs
-
-  // Create header_page
-  page_id_t page_id;
-  bpm->NewPage(&page_id, nullptr);
-  // LOG_DEBUG("new page %d", (int)page_id);
-  //  insert all the keys
-  for (int i = 0; i < num_keys; i++) {
-    ht.Insert(nullptr, i, i);
-    std::vector<int> res;
-    EXPECT_TRUE(ht.GetValue(nullptr, i, &res));
-    EXPECT_EQ(1, res.size()) << "Failed to insert " << i << std::endl;
-  }
-
-  ht.VerifyIntegrity();
-
-  //  remove half the keys
-  for (int i = 0; i < num_keys / 2; i++) {
-    EXPECT_TRUE(ht.Remove(nullptr, i, i));
-    std::vector<int> res;
-    EXPECT_FALSE(ht.GetValue(nullptr, i, &res));
-    EXPECT_EQ(0, res.size()) << "Found non-existent key " << i << std::endl;
-  }
-
-  ht.VerifyIntegrity();
-
-  //  try to find the removed half
-  for (int i = 0; i < num_keys / 2; i++) {
-    std::vector<int> res;
-    EXPECT_FALSE(ht.GetValue(nullptr, i, &res));
-  }
-
-  //  insert to the 2nd half as duplicates
-  for (int i = num_keys / 2; i < num_keys; i++) {
-    ht.Insert(nullptr, i, i + 1);
-    std::vector<int> res;
-    EXPECT_TRUE(ht.GetValue(nullptr, i, &res));
-    EXPECT_EQ(2, res.size()) << "Missing duplicate kv pair for: " << i << std::endl;
-  }
-
-  ht.VerifyIntegrity();
-
-  //  get all the duplicates
-  for (int i = num_keys / 2; i < num_keys; i++) {
-    std::vector<int> res;
-    EXPECT_TRUE(ht.GetValue(nullptr, i, &res));
-    EXPECT_EQ(2, res.size()) << "Missing duplicate kv pair for: " << i << std::endl;
-  }
-
-  ht.VerifyIntegrity();
-
-  //  remove the last duplicates inserted
-  for (int i = num_keys / 2; i < num_keys; i++) {
-    EXPECT_TRUE(ht.Remove(nullptr, i, i + 1));
-    std::vector<int> res;
-    EXPECT_TRUE(ht.GetValue(nullptr, i, &res));
-    EXPECT_EQ(1, res.size()) << "Missing kv pair for: " << i << std::endl;
-  }
-
-  ht.VerifyIntegrity();
-
-  //  query everything
-  for (int i = num_keys / 2; i < num_keys; i++) {
-    std::vector<int> res;
-    EXPECT_TRUE(ht.GetValue(nullptr, i, &res));
-    EXPECT_EQ(1, res.size()) << "Missing kv pair for: " << i << std::endl;
-  }
-
-  ht.VerifyIntegrity();
-
-  //  remove the rest of the remaining keys
-  for (int i = num_keys / 2; i < num_keys; i++) {
-    EXPECT_TRUE(ht.Remove(nullptr, i, i));
-    std::vector<int> res;
-    EXPECT_FALSE(ht.GetValue(nullptr, i, &res));
-    EXPECT_EQ(0, res.size()) << "Failed to insert " << i << std::endl;
-  }
-
-  ht.VerifyIntegrity();
-
-  //  query everything
-  for (int i = 0; i < num_keys; i++) {
-    std::vector<int> res;
-    EXPECT_FALSE(ht.GetValue(nullptr, i, &res));
-    EXPECT_EQ(0, res.size()) << "Found non-existent key: " << i << std::endl;
-  }
-
-  //  Verify Merging Worked
-  assert(ht.GetGlobalDepth() < 8);
-  ht.VerifyIntegrity();
-
-  disk_manager->ShutDown();
-  remove("test.db");
-  delete disk_manager;
-  delete bpm;
-}
-
-/*
- * Score: 5
- * Description: Insert 200k keys to verify the table capacity
- */
-TEST(HashTableScaleTest, ScaleTest) { ScaleTestCall(); }
 
 /*
  * Score: 5

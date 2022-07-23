@@ -186,6 +186,16 @@ class HashTableDirectoryPage {
    */
   void PrintDirectory();
 
+  /**
+   * True if can increase global depth
+   */
+  bool CanIncr();
+
+  /**
+   * True if can increase global depth
+   */
+  auto GetAllRead() -> uint32_t;
+
  private:
   page_id_t page_id_;
   lsn_t lsn_;
