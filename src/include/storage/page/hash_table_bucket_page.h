@@ -175,7 +175,6 @@ class HashTableBucketPage {
   char readable_[(BUCKET_ARRAY_SIZE - 1) / 8 + 1];
 
   MappingType array_[1];
-  // MappingType array_[0];
 };
 
 }  // namespace bustub
