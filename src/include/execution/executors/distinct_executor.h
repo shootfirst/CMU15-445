@@ -13,10 +13,59 @@
 #pragma once
 
 #include <memory>
+#include <unordered_map>
 #include <utility>
+#include <vector>
 
+#include "common/util/hash_util.h"
 #include "execution/executors/abstract_executor.h"
 #include "execution/plans/distinct_plan.h"
+
+namespace bustub {
+
+struct DistinctKey {
+  /** The group-by values */
+  std::vector<Value> distin_bys_;
+
+  /**
+   * Compares two aggregate keys for equality.
+   * @param other the other aggregate key to be compared with
+   * @return `true` if both aggregate keys have equivalent group-by expressions, `false` otherwise
+   */
+  bool operator==(const DistinctKey &other) const {
+    for (uint32_t i = 0; i < other.distin_bys_.size(); i++) {
+      if (distin_bys_[i].CompareEquals(other.distin_bys_[i]) != CmpBool::CmpTrue) {
+        return false;
+      }
+    }
+    return true;
+  }
+};
+
+/** AggregateValue represents a value for each of the running aggregates */
+struct DistinctValue {
+  /** The aggregate values */
+  std::vector<Value> sistinct_;
+};
+
+}  // namespace bustub
+
+namespace std {
+/** Implements std::hash on DistinctKey */
+template <>
+struct hash<bustub::DistinctKey> {
+  std::size_t operator()(const bustub::DistinctKey &agg_key) const {
+    size_t curr_hash = 0;
+    for (const auto &key : agg_key.distin_bys_) {
+      if (!key.IsNull()) {
+        curr_hash = bustub::HashUtil::CombineHashes(curr_hash, bustub::HashUtil::HashValue(&key));
+      }
+    }
+    return curr_hash;
+  }
+};
+
+}  // namespace std
 
 namespace bustub {
 
@@ -49,9 +98,34 @@ class DistinctExecutor : public AbstractExecutor {
   auto GetOutputSchema() -> const Schema * override { return plan_->OutputSchema(); };
 
  private:
+  DistinctKey GetDistinctKey(const Tuple *tuple, const Schema *schema) {
+    std::vector<Value> vals;
+    std::size_t columns_size = schema->GetColumnCount();
+    vals.reserve(columns_size);
+
+    for (uint32_t i = 0; i < columns_size; i++) {
+      vals.emplace_back(tuple->GetValue(schema, i));
+    }
+    return {vals};
+  }
+
+  DistinctValue GetDistinctValue(const Tuple *tuple, const Schema *schema) {
+    std::vector<Value> vals;
+    std::size_t columns_size = schema->GetColumnCount();
+    vals.reserve(columns_size);
+
+    for (uint32_t i = 0; i < columns_size; i++) {
+      vals.emplace_back(tuple->GetValue(schema, i));
+    }
+    return {vals};
+  }
+
   /** The distinct plan node to be executed */
   const DistinctPlanNode *plan_;
   /** The child executor from which tuples are obtained */
   std::unique_ptr<AbstractExecutor> child_executor_;
+
+  std::unordered_map<DistinctKey, DistinctValue> key_dic_{};
+  std::unordered_map<DistinctKey, DistinctValue>::iterator it_;
 };
 }  // namespace bustub

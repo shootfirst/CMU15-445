@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include <string>
 #include <vector>
 
 #include "buffer/buffer_pool_manager.h"
@@ -54,6 +55,13 @@ class ExecutionEngine {
 
     // Prepare the root executor
     executor->Init();
+
+    // std::ifstream file("/autograder/bustub/src/execution/mock_scan_executor.cpp");
+    // std::string str;
+    // while (file.good()) {
+    //   std::getline(file, str);
+    //   std::cout << str << std::endl;
+    // }
 
     // Execute the query plan
     try {

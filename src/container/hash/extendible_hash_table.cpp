@@ -174,8 +174,8 @@ auto HASH_TABLE_TYPE::SplitInsert(Transaction *transaction, const KeyType &key, 
     // increase global depth
 
     if (directory_page->GetGlobalDepth() == directory_page->GetLocalDepth(bucket_idx)) {
-      LOG_DEBUG("bucket index %x", (int)bucket_idx);
-      LOG_DEBUG("global depth is %d", (int)directory_page->GetGlobalDepth());
+      // LOG_DEBUG("bucket index %x", (int)bucket_idx);
+      // LOG_DEBUG("global depth is %d", (int)directory_page->GetGlobalDepth());
       if (!directory_page->CanIncr()) {
         buffer_pool_manager_->UnpinPage(directory_page_id_, true);
         buffer_pool_manager_->UnpinPage(bucket_page_id, true);
@@ -202,9 +202,7 @@ auto HASH_TABLE_TYPE::SplitInsert(Transaction *transaction, const KeyType &key, 
 
     auto image_page = reinterpret_cast<HashTableBucketPage<KeyType, ValueType, KeyComparator> *>(
         buffer_pool_manager_->NewPage(&image_page_id, nullptr)->GetData());
-    LOG_DEBUG("new page %d", (int)image_page_id);
-    // LOG_DEBUG("%d th > : %d", *kkk, (int)image_page_id);
-
+    // LOG_DEBUG("new page %d", (int)image_page_id);
     // set the image image_page_id
 
     uint32_t new_depth = directory_page->GetLocalDepth(bucket_idx);
@@ -369,7 +367,7 @@ void HASH_TABLE_TYPE::Merge(Transaction *transaction, const KeyType &key, const 
 
     // unpin
     buffer_pool_manager_->UnpinPage(bucket_page_id, true);
-    LOG_DEBUG("unpin page %d", (int)bucket_page_id);
+    // LOG_DEBUG("unpin page %d", (int)bucket_page_id);
 
     if (directory_page->GetLocalDepth(image_idx) == 0) {
       break;
@@ -386,13 +384,6 @@ void HASH_TABLE_TYPE::Merge(Transaction *transaction, const KeyType &key, const 
   while (directory_page->CanShrink()) {
     directory_page->DecrGlobalDepth();
   }
-
-  // for (uint32_t i = 0; i < directory_page->Size(); i++) {
-  //   bucket_page = reinterpret_cast<HashTableBucketPage<KeyType, ValueType, KeyComparator> *>
-  //     (buffer_pool_manager_->FetchPage(directory_page->GetBucketPageId(i), nullptr)->GetData());
-  //   LOG_DEBUG("bucket %d: %d",(int)i, (int)bucket_page->IsEmpty());
-  //   buffer_pool_manager_->UnpinPage(directory_page->GetBucketPageId(i), false);
-  // }
 
   buffer_pool_manager_->UnpinPage(bucket_page_id, true);
   buffer_pool_manager_->UnpinPage(directory_page_id_, true);

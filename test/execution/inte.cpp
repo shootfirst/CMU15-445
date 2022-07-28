@@ -80,9 +80,9 @@ TEST_F(GradingExecutorTest, Integrated1) {
         join_schema, std::vector<const AbstractPlanNode *>{table1_scan.get(), table3_scan.get()}, predicate);
   }
 
-  std::vector<Tuple> result{};
-  GetExecutionEngine()->Execute(join_plan.get(), &result, GetTxn(), GetExecutorContext());
-  LOG_DEBUG("join size %d", (int)result.size());
+  // std::vector<Tuple> result{};
+  // GetExecutionEngine()->Execute(join_plan.get(), &result, GetTxn(), GetExecutorContext());
+  // LOG_DEBUG("join size %d", (int)result.size());
 
   const Schema *agg_schema;
   std::unique_ptr<AbstractPlanNode> agg_plan;
