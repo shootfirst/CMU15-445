@@ -32,6 +32,13 @@ auto UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
   Transaction *txn = exec_ctx_->GetTransaction();
 
   while (child_executor_->Next(tuple, rid)) {
+    // fetch exclusivelock
+    if (txn->IsSharedLocked(*rid)) {
+      exec_ctx_->GetLockManager()->LockUpgrade(txn, *rid);
+    }
+    if (!txn->IsExclusiveLocked(*rid)) {
+      exec_ctx_->GetLockManager()->LockExclusive(txn, *rid);
+    }
     // update table
     auto new_tuple = GenerateUpdatedTuple(*tuple);
     table_info_->table_->UpdateTuple(new_tuple, *rid, txn);
@@ -47,6 +54,9 @@ auto UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
       auto new_key_tuple =
           new_tuple.KeyFromTuple(table_info_->schema_, indexes[i]->key_schema_, indexes[i]->index_->GetKeyAttrs());
       indexes[i]->index_->InsertEntry(new_key_tuple, *rid, txn);
+
+      txn->GetIndexWriteSet()->emplace_back(*rid, plan_->TableOid(), WType::UPDATE, new_key_tuple, key_tuple,
+                                            indexes[i]->index_oid_, exec_ctx_->GetCatalog());
     }
   }
   return false;

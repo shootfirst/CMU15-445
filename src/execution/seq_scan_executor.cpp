@@ -33,12 +33,27 @@ auto SeqScanExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   const Schema *schema_output = plan_->OutputSchema();
 
   uint32_t out_cnt = schema_output->GetColumnCount();
+  auto txn = exec_ctx_->GetTransaction();
   while (table_iterator_ != end_iterator_) {
     Tuple search_tuple = *table_iterator_;
+
+    // fetch sharedlock
+    RID d = search_tuple.GetRid();
+    if (txn->GetIsolationLevel() != IsolationLevel::READ_UNCOMMITTED) {
+      if (!txn->IsSharedLocked(d) && !txn->IsExclusiveLocked(d)) {
+        exec_ctx_->GetLockManager()->LockShared(txn, d);
+      }
+    }
+
     table_iterator_++;
     auto predicate = plan_->GetPredicate();
     if (predicate == nullptr ||
         dynamic_cast<const ComparisonExpression *>(predicate)->Evaluate(&search_tuple, &schema).GetAs<bool>()) {
+      // finish reading , unlock
+      if (txn->GetIsolationLevel() == IsolationLevel::READ_COMMITTED && txn->IsSharedLocked(d)) {
+        exec_ctx_->GetLockManager()->Unlock(txn, d);
+      }
+
       std::vector<Value> values;
       values.reserve(out_cnt);
       for (uint32_t i = 0; i < out_cnt; i++) {
@@ -48,6 +63,11 @@ auto SeqScanExecutor::Next(Tuple *tuple, RID *rid) -> bool {
       *tuple = res;
       *rid = search_tuple.GetRid();
       return true;
+    }
+
+    // finish reading , unlock
+    if (txn->GetIsolationLevel() == IsolationLevel::READ_COMMITTED && txn->IsSharedLocked(d)) {
+      exec_ctx_->GetLockManager()->Unlock(txn, d);
     }
   }
   return false;

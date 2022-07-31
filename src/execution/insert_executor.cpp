@@ -30,6 +30,8 @@ void InsertExecutor::Init() {
 auto InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
   auto table_info = exec_ctx_->GetCatalog()->GetTable(plan_->TableOid());
 
+  Transaction *txn = exec_ctx_->GetTransaction();
+
   Tuple insert_tuple;
 
   if (plan_->IsRawInsert()) {
@@ -39,7 +41,11 @@ auto InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
     for (size_t i = 0; i < size; i++) {
       // insert to table
       *tuple = Tuple(raw_values[i], &table_info->schema_);
+
       table_info->table_->InsertTuple(*tuple, rid, exec_ctx_->GetTransaction());
+
+      // fetch exclusivelock
+      exec_ctx_->GetLockManager()->LockExclusive(txn, *rid);
 
       // update index
       auto indexes = exec_ctx_->GetCatalog()->GetTableIndexes(table_info->name_);
@@ -49,6 +55,10 @@ auto InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
         auto key_tuple =
             tuple->KeyFromTuple(table_info->schema_, indexes[i]->key_schema_, indexes[i]->index_->GetKeyAttrs());
         indexes[i]->index_->InsertEntry(key_tuple, *rid, exec_ctx_->GetTransaction());
+
+        IndexWriteRecord rcd = IndexWriteRecord(*rid, plan_->TableOid(), WType::INSERT, key_tuple, {},
+                                                indexes[i]->index_oid_, exec_ctx_->GetCatalog());
+        txn->GetIndexWriteSet()->emplace_back(rcd);
       }
     }
 
@@ -57,6 +67,9 @@ auto InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
       // insert to table
       table_info->table_->InsertTuple(*tuple, rid, exec_ctx_->GetTransaction());
 
+      // fetch exclusivelock
+      exec_ctx_->GetLockManager()->LockExclusive(txn, *rid);
+
       // update index
       auto indexes = exec_ctx_->GetCatalog()->GetTableIndexes(table_info->name_);
       size_t size = indexes.size();
@@ -65,6 +78,10 @@ auto InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
         auto key_tuple =
             tuple->KeyFromTuple(table_info->schema_, indexes[i]->key_schema_, indexes[i]->index_->GetKeyAttrs());
         indexes[i]->index_->InsertEntry(key_tuple, *rid, exec_ctx_->GetTransaction());
+
+        IndexWriteRecord rcd = IndexWriteRecord(*rid, plan_->TableOid(), WType::INSERT, key_tuple, {},
+                                                indexes[i]->index_oid_, exec_ctx_->GetCatalog());
+        txn->GetIndexWriteSet()->emplace_back(rcd);
       }
     }
   }

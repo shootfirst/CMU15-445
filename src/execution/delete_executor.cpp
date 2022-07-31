@@ -31,6 +31,13 @@ auto DeleteExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
 
   Transaction *txn = exec_ctx_->GetTransaction();
   while (child_executor_->Next(tuple, rid)) {
+    // fetch exclusivelock
+    if (txn->IsSharedLocked(*rid)) {
+      exec_ctx_->GetLockManager()->LockUpgrade(txn, *rid);
+    }
+    if (!txn->IsExclusiveLocked(*rid)) {
+      exec_ctx_->GetLockManager()->LockExclusive(txn, *rid);
+    }
     // delete in table
     table_info->table_->MarkDelete(*rid, txn);
 
@@ -42,6 +49,10 @@ auto DeleteExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
       auto key_tuple =
           tuple->KeyFromTuple(table_info->schema_, indexes[i]->key_schema_, indexes[i]->index_->GetKeyAttrs());
       indexes[i]->index_->DeleteEntry(key_tuple, *rid, txn);
+
+      IndexWriteRecord rcd = IndexWriteRecord(*rid, plan_->TableOid(), WType::DELETE, {}, key_tuple,
+                                              indexes[i]->index_oid_, exec_ctx_->GetCatalog());
+      txn->GetIndexWriteSet()->emplace_back(rcd);
     }
   }
   return false;
