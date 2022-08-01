@@ -78,14 +78,18 @@ void TransactionManager::Abort(Transaction *txn) {
   table_write_set->clear();
   // Rollback index updates
   auto index_write_set = txn->GetIndexWriteSet();
+  // LOG_DEBUG("%d", (int)index_write_set->size());
   while (!index_write_set->empty()) {
     auto &item = index_write_set->back();
     auto catalog = item.catalog_;
+
     // Metadata identifying the table that should be deleted from.
     TableInfo *table_info = catalog->GetTable(item.table_oid_);
     IndexInfo *index_info = catalog->GetIndex(item.index_oid_);
+
     auto new_key = item.tuple_.KeyFromTuple(table_info->schema_, *(index_info->index_->GetKeySchema()),
                                             index_info->index_->GetKeyAttrs());
+
     if (item.wtype_ == WType::DELETE) {
       index_info->index_->InsertEntry(new_key, item.rid_, txn);
     } else if (item.wtype_ == WType::INSERT) {

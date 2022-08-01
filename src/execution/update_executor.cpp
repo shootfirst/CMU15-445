@@ -55,8 +55,9 @@ auto UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
           new_tuple.KeyFromTuple(table_info_->schema_, indexes[i]->key_schema_, indexes[i]->index_->GetKeyAttrs());
       indexes[i]->index_->InsertEntry(new_key_tuple, *rid, txn);
 
-      txn->GetIndexWriteSet()->emplace_back(*rid, plan_->TableOid(), WType::UPDATE, new_key_tuple, key_tuple,
-                                            indexes[i]->index_oid_, exec_ctx_->GetCatalog());
+      IndexWriteRecord rcd = IndexWriteRecord(*rid, plan_->TableOid(), WType::DELETE, new_tuple, *tuple,
+                                              indexes[i]->index_oid_, exec_ctx_->GetCatalog());
+      txn->GetIndexWriteSet()->emplace_back(rcd);
     }
   }
   return false;

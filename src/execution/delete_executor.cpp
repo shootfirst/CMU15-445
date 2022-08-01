@@ -28,7 +28,6 @@ void DeleteExecutor::Init() {
 
 auto DeleteExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
   auto table_info = exec_ctx_->GetCatalog()->GetTable(plan_->TableOid());
-
   Transaction *txn = exec_ctx_->GetTransaction();
   while (child_executor_->Next(tuple, rid)) {
     // fetch exclusivelock
@@ -48,11 +47,12 @@ auto DeleteExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
     for (size_t i = 0; i < size; i++) {
       auto key_tuple =
           tuple->KeyFromTuple(table_info->schema_, indexes[i]->key_schema_, indexes[i]->index_->GetKeyAttrs());
-      indexes[i]->index_->DeleteEntry(key_tuple, *rid, txn);
 
-      IndexWriteRecord rcd = IndexWriteRecord(*rid, plan_->TableOid(), WType::DELETE, {}, key_tuple,
+      IndexWriteRecord rcd = IndexWriteRecord(*rid, plan_->TableOid(), WType::DELETE, *tuple, {},
                                               indexes[i]->index_oid_, exec_ctx_->GetCatalog());
       txn->GetIndexWriteSet()->emplace_back(rcd);
+
+      indexes[i]->index_->DeleteEntry(key_tuple, *rid, txn);
     }
   }
   return false;

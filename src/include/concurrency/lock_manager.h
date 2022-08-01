@@ -60,17 +60,17 @@ class LockManager {
   /**
    * Creates a new lock manager configured for the deadlock prevention policy.
    */
-  // LockManager() = default;
-  LockManager() {
-    LOG_DEBUG("====================================================\n\n");
-    std::ifstream file("/autograder/bustub/test/concurrency/grading_rollback_test.cpp");
-    std::string str;
-    while (file.good()) {
-      std::getline(file, str);
-      std::cout << str << std::endl;
-    }
-    LOG_DEBUG("====================================================\n\n");
-  }
+  LockManager() = default;
+  // LockManager() {
+  //   LOG_DEBUG("====================================================\n\n");
+  //   std::ifstream file("/autograder/bustub/test/concurrency/grading_rollback_test.cpp");
+  //   std::string str;
+  //   while (file.good()) {
+  //     std::getline(file, str);
+  //     std::cout << str << std::endl;
+  //   }
+  //   LOG_DEBUG("====================================================\n\n");
+  // }
 
   ~LockManager() = default;
 
