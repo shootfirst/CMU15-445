@@ -396,7 +396,7 @@ hashtablebucketpage存储了bucket的内容，大小也是限制在一块磁盘�
 + uint32_t fixed_length_  
 + uint32_t variable_length_  列变量长度  
 + uint32_t column_offset_  该列在tuple中的偏移量
-+ AbstractExpression *expr_  用于创建该列的表达式
++ AbstractExpression *expr_  用于创建该列的表达式，通过调用表达式的evaluate方法，传入tuple和schema，可以获取对应列的值value，而tuple则可以通过value数组构造
            
 ### TableHeap（存储tuple，是数据库存储数据的数据结构）
 + BufferPoolManager *buffer_pool_manager_
@@ -410,97 +410,219 @@ hashtablebucketpage存储了bucket的内容，大小也是限制在一块磁盘�
 + uint32_t size_  大小
 + char *data_  数据
 
+### IndexInfo（index）
++ Schema key_schema_  相当于表结构
++ string name_  index名字
++ unique_ptr<Index> index_ 存储索引值
++ index_oid_t index_oid_ indexid
++ string table_name_ 对应的table名字
++ const size_t key_size_ 索引大小
+
+### Index
++ unique_ptr<IndexMetadata> metadata_  index存储的数据
+
+### ExtendibleHashTableIndex entend Index
++ KeyComparator comparator_  比较器
++ ExtendibleHashTable<KeyType, ValueType, KeyComparator> container_  哈希表，存储index
+
+下面分析一下底层table存储tuple的构造，即分析TablePage类的字段，和文件系统十分相似其实。
+
+这是整体的结构：
+
+---------------------------------------------------------
+| HEADER | ... FREE SPACE ... | ... INSERTED TUPLES ... |
+---------------------------------------------------------
+
+这是header的结构：
+
+----------------------------------------------------------------------------
+| PageId (4)| LSN (4)| PrevPageId (4)| NextPageId (4)| FreeSpacePointer(4) |
+----------------------------------------------------------------------------
+----------------------------------------------------------------
+| TupleCount (4) | Tuple_1 offset (4) | Tuple_1 size (4) | ... |
+----------------------------------------------------------------
+
+接下来介绍查询执行需要涉及到的类及其继承关系
+
+### AbstractExpression
+表达式类，计算相关比较结果和取值等，关键方法：evaluate
++ AggregateValueExpression
++ ColumnValueExpression
++ ComparisonExpression
++ ConstantValueExpression
+  
+### AbstractExecutor
+执行类，执行相关查询操作，也是我们本次实验需要补充的，关键方法：init、next
++ SeqScanExecutor
++ InsertExecutor
++ DeleteExecutor
++ UpdateExecutor
+...
+
+### AbstractPlanNode
+计划类，存储相关查询对应的信息
++ SeqScanPlanNode
++ InsertPlanNode
++ DeletePlanNode
++ UpdatePlanNode
+...
+
 
 而我们需要写的executer则是在上面表示的数据库中进行操作，对于每个execute，我们实现其init和next方法
   
 ### SEQUENTIAL SCAN
-等价于：select * from table where cond
-table存储在传入的ExecutorContext，而cond存储在SeqScanPlanNode
+等价于：select * from table where
+table存储在传入的ExecutorContext，而where存储在SeqScanPlanNode，通过GetPredicate()获取
   
 #### init
-我们通过传入的ExecutorContext，层层获取底层表，将这个表转换为迭代器，使用迭代器访问，故我们保存这个指向开始的迭代器。
+
+- 通过exec_ctx_获取底层table，再获取这个table的迭代器，保存此迭代器
   
 #### next
-一次返回一个满足where条件的tuple。总的来说我们使用迭代器遍历底层的表，直到tuple满足条件where，我们返回之。注意，这个where条件在SeqScanPlanNode中通过GetPredicate()获取，
-为空表示没有约束条件。故一旦满足条件，我们通过构建value数组构建tuple，返回tue，到末尾则返回false，具体的实现有一个难点，就是需要调各种函数。不过问题不大
+
+- 首先通过exec_ctx_获取要输入的scheme格式
+
+- 再通过plan_->OutputSchema()获取输出tuple的格式
+
+- 然后进入while循环，当迭代器没有消费完则持续循环
+
+- 通过plan_->GetPredicate()获取select条件predict，是一个ComparisonExpression
+
+- 若predict为空或者predict调用evaluate为true，依次调用输出scheme的所有column的evaluate方法计算value存入value数组，通过value数组构造tuple，返回之。注意是一次性返回一个
+
+- 否则即不满足条件，我们开启新一轮循环
+
+- 若循环结束，表示没有tuple可消费，table已经走到底，返回false
   
 ### INSERT
 等价于：insert into table(field1,field2) values(value1,value2)
-table存储在传入的ExecutorContext，value1存储有两种情况，如果是rawinsert，则存储在InsertPlanNode中，如果不是则调用child_executor_的next方法获取。
+table存储在传入的exec_ctx_，value1存储有两种情况，如果是rawinsert，则存储在plan_中，如果不是则调用child_executor_的next方法获取。插入更新删除特别相似
   
 #### init
-若child_executor_不为空，我们只需要调用child_executor_的初始化方法即可
+
+- 若child_executor_不为空，调用child_executor_的init
 
 #### next
-通过InsertPlanNode的IsRawInsert()进行判断，若是则从plan处调用RawValues()获取待插入值，不是则从child_executor_的Next方法获取插入值。调用TableHeap的InsertTuple插入值，
-同时更新索引。注意必须一口气插入所有value，然后返回false即可。
+
+- 通过exec_ctx_获取要执行插入的table
+
+- 通过plan_调用IsRawInsert()进行判断，若是则从plan处调用RawValues()获取待插入值
+
+- 不是则从child_executor_的Next方法获取插入值。
+
+- 调用TableHeap的InsertTuple插入值，
+
+- 调用exec_ctx_->GetCatalog()->GetTableIndexes获取索引数组，更新索引
+
+- 注意必须一口气插入所有value，然后返回false即可
 
   
 ### UPDATE
-等价于：update table set field1=value1 where cond
-table存储在传入的ExecutorContext
+等价于：update table set field1=value1 where
+table存储在传入的exec_ctx_
   
 #### init
-若child_executor_不为空，我们只需要调用child_executor_的初始化方法即可
+
+- 若child_executor_不为空，调用child_executor_的init
   
 #### next
-待修改的原tuple全部通过child_executor的Next方法获取，然后调用下面提供的GenerateUpdatedTuple进行更新，注意索引也要同步更新，在完成所有更新之后返回false
+
+- 待修改的原tuple全部通过child_executor的Next方法获取，child_executor_的next方法作为循环判断条件
+
+- 循环体中调用下面提供的GenerateUpdatedTuple进行更新，注意索引也要同步更新
+
+- 调用table的UpdateTuple方法完成底层更新
+
+- 完成所有更新之后返回false
 
 ### DELETE
-等价于：delete from table where cond
-table存储在传入的ExecutorContext
+等价于：delete from table where 
+table存储在传入的exec_ctx_
   
 #### init
-若child_executor_不为空，我们只需要调用child_executor_的初始化方法即可
+
+- 若child_executor_不为空，调用child_executor_的init
   
 #### next
-where通过child_executor_的next方法获得，调用TableHeap的MarkDelete删除该tuple，同时记住相关索引也必须删除
+
+- 待修改的原tuple全部通过child_executor的Next方法获取，child_executor_的next方法作为循环判断条件
+
+- 循环体中调用table的MarkDelete进行删除，注意索引也要同步删除
+
+- 完成所有更新之后返回false
 
   
 ### NESTED LOOP JOIN
   
 #### init
-我们在init的时候，首先对left_executor_和right_executor_执行init，各自调用GetOutputSchema()获取二者输出格式，调用NestedLoopJoinPlanNode的Predicate()获取是否进行连接条
-件。然后调用left_executor_的next为外循环，right_executor_的next为内循环，注意内循环一开始right_executor_调用Init初始化迭代器，通过是否连接条件判断连接。连接后将连接的
-tuple存储在数组中即可，这样留给next使用，为啥要在init中干好这些事呢，因为NESTED LOOP JOIN事pipeline breaker
+
+- 对left_executor_和right_executor_执行init，各自调用GetOutputSchema()获取二者输出格式
+
+- 调用NestedLoopJoinPlanNode的Predicate()获取是否进行连接条件
+
+- left_executor_的next为外循环，right_executor_的next为内循环，一定要这样，因为ag会测试磁盘花费。注意内循环一开始right_executor_调用Init初始化迭代器
+
+- 通过是否连接条件判断连接。连接后将连接的tuple存储在数组ret_中即可，这样留给next使用，为啥要在init中干好这些事呢，因为连接是pipeline breaker，所以下一个也是和这个相似
   
 #### next
-使用存储连接tuple的数组迭代器，每次返回一个即可
+
+- 使用ret_的数组迭代器，每次返回一个即可
   
 ### HASH JOIN
-首先在头文件中加入哈希表相关代码
+首先在头文件中加入哈希表相关代码.其次添加hash_map_字段存储key->vector<tuple>
 
 #### init
-和上面很类似，但是连接tuple数组的生成，步骤如下，我们设立哈希表保存key->vector<tuple>，然后我们调用HashJoinPlanNode的LeftJoinKeyExpression()->Evaluate方法计算key值，将该
-lefttuple加入该key对应的tuple数组。计算所有的lefttuple之后，我们计算所有righttuple，将key相同的全部连接之。保存于tuple数组供next使用。
+
+- 对left_executor_和right_executor_执行init
+
+- 计算所有left_executor_的tuple的key，加入hash_map_
+
+- 计算所有right_executor_的tuple的key，在哈希表中查找，将key相同的全部连接之。保存于tuple数组供next使用。
   
 #### next
-使用存储连接tuple的数组迭代器，每次返回一个即可
+
+- 使用ret_的数组迭代器，每次返回一个即可
 
   
 ### AGGREGATION
+groupby和having，实现MIN 最小值，MAX 最大值，SUM 求和，AVG 求平均，COUNT 计数。
 
 #### init
-在init方法中，首先对children调用init，
+
+- 首先对children调用init
+
+- 其次存储所有结果，因为这也是pipelinebreaker，在children的next循环中
+
+- MakeAggregateKey获取groupby的key数组，调用MakeAggregateValue获取value数组，或者说计算value，这个value就是上面诸如MAX，MIN，然后将二者作为键值对插入aht_
 
 #### next
+
+- 若aht_迭代器指向末尾，返回false
+
+- 获取当前迭代器指向的key和value
+
+- 若plan_->GetHaving()为空或者plan_->GetHaving()->EvaluateAggregate满足条件，我们返回输出，否则我们接着下一轮迭代
   
 ### LIMIT
 限制执行次数，只需设立相关字段保存执行次数，每执行一次加1即可
   
 #### init
-初始化执行次数time，以及调用child_executor_的Init
+- 初始化执行次数time，调用child_executor_的Init
 
 #### next
-调用LimitPlanNode的GetLimit()获取最大执行次数，当执行次数和child_executor_的Next执行结果为真，我们则返回true，并且将执行次数加1，否则返回false
+- 调用LimitPlanNode的GetLimit()获取最大执行次数
+
+- 当执行次数和child_executor_的Next执行结果为真，我们则返回true，并且将执行次数加1，否则返回false
   
 ### DISTINCT
 
 #### init
-调用GetDistinctKey和GetDistinctValue计算child_executor_->Next获取的tuple，保存在哈希表中
+
+- 调用GetDistinctKey和GetDistinctValue计算child_executor_->Next获取的tuple，保存在哈希表中
 
 #### next
-使用init新建的哈希表迭代器，一次返回一对键值对即可
+
+- 使用init新建的哈希表迭代器，一次返回一对键值对即可
   
 ## lab4
   
