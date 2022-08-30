@@ -179,15 +179,14 @@ victim也只需pop链表头，从哈希表中删除即可，时间复杂度也�
 这里的SplitImage概念指导书说自己会明白，定义：
 
 - 真镜像：a为xxxxx1000，b为xxxxx0000，a的真镜像是b，x的个数是globaldepth-localdepth，代表0或者1，二者所有x代表的位值应该相同而数字的位数则是localdepth。所以获取的真镜像
-  是bucket_idx ^ (1 <<(local_depth_[bucket_idx] - 1))，注意^符号是异或
+  是bucket_idx ^ (1 <<(local_depth_[bucket_idx] - 1))，注意^符号是异或。称a的真镜像是b
 
-- 镜像：a为xx1xx1000，globaldepth为9，local_depths
+- 镜像：a为xxxxx1000，b位yyyyy0000，x和y不一定相等，x和y的个数均是globaldepth-localdepth，称b是a的镜像之一
 
-- 镜像族
+- 镜像族：所有的b就是a的镜像族
 
-举个栗子，这里获取的是其中一个镜像，这里注意深度为0时调用此方法会报错！！！这里还得区分一下镜像
-(SplitImage)和镜像族，镜像是镜像族的一个，我这里获取的镜像是只有第localdepth位不同，其他都相同，而镜像族则是所有localdepth-1位都相同，但是第localdepth位不同的所有index集合
-(最高位限制到globaldepth位)，在分裂和合并时镜像族的概念非常重要！！！
+镜像是镜像族的一个，真镜像是只有第localdepth位不同，其他都相同，而镜像族则是所有localdepth-1位都相同，但是第localdepth位不同的所有index集合，(最高位限制到globaldepth位)，
+在分裂和合并时镜像族的概念非常重要！！！
 
 ##### CanIncr
 
@@ -248,10 +247,12 @@ hashtablebucketpage存储了bucket的内容，大小也是限制在一块磁盘�
   
 #### 构造方法
   
-在构造方法中，我们首先需要新建directory_page的page，调用实验一写的new方法即可。然后unpin之。接下来我们需要新建一个bucket页，同时再获取directory_page，将新建的bucketid
-写入数组下标为0的位置即可，这样我们的哈希表成功新建了directory_page，同时我们还新建了一个bucketpage，用于装填数据。pageid已经写入directorypage中。完成哈希表初始化。最后在
-这里我要说明下带page和不带page的数据结构区别，如hashtabledirectorypage和hashtabledirectory，前者主要是侧重该数据结构存储在磁盘，后者侧重数据结构。当从磁盘读出这块数据结构
-时，是一段字节序列，我们使用cpp自带的强转reinterpret_cast转化为相关数据结构。应该是很好理解。下面的辅助方法会提到
+- 首先需要新建directory_page的page，调用实验一写的new方法即可，然后unpin之
+- 接下来新建一个bucket页，同时再获取directory_page，将新建的bucketid写入数组下标为0的位置即可，这样我们的哈希表成功新建了directory_page，同时我们还新建了一个bucketpage，
+  用于装填数据。pageid已经写入directorypage中。完成哈希表初始化。
+  
+- 最后在这里我要说明下带page和不带page的数据结构区别，如hashtabledirectorypage和hashtabledirectory，前者主要是侧重该数据结构存储在磁盘，后者侧重数据结构。当从磁盘读
+  出这块数据结构时，是一段字节序列，我们使用cpp自带的强转reinterpret_cast转化为相关数据结构。应该是很好理解。下面的辅助方法会提到
   
 #### 辅助方法
   
@@ -265,45 +266,100 @@ hashtablebucketpage存储了bucket的内容，大小也是限制在一块磁盘�
   
 #### GetValue
   
-首先FetchDirectoryPage，再计算哈希值，获取bucket_idx号，通过DirectoryPage获取数组下标为bucket_idx，得到bucketpageid。再FetchBucketPage。这一系列操作后面的方法一开始基本
-会用到，这就是从内存缓冲池管理器那里获取DirectoryPage，再通过DirectoryPage的bucket_page_ids_获取bucketpageid，通过这个从内存缓冲池管理器那里获取对应bucketpage。后面的
-方法我就简称初始化调用其GetValue即可，最后记得unpinfetch的两个page，否则缓冲区会爆，而且test的检查会很严格，一般对于此哈希表最少只需要3个page即可支持整个哈希表的内存运
-作，这个我会在SplitInsert详细讨论。而对于线程安全的GetValue，我们只需一开始对整个哈希表加读锁，而对于bucket页，我们也是请求读锁，这样可以减少锁的竞争。
+- 首先FetchDirectoryPage
+  
+- 再计算哈希值，获取bucket_idx号，通过DirectoryPage获取数组下标为bucket_idx，得到bucketpageid。
+  
+- 再FetchBucketPage。这一系列操作后面的方法一开始基本会用到，这就是从内存缓冲池管理器那里获取DirectoryPage，再通过DirectoryPage的bucket_page_ids_获取bucketpageid，
+  通过这个从内存缓冲池管理器那里获取对应bucketpage。后面的方法我就简称初始化。
+  
+- 接下来调用其GetValue即可，最后unpin初始化阶段fetch两个page，否则缓冲区会爆，而且test的检查会很严格，一般对于此哈希表最少只需要3个page即可支持整个哈希表的内存运
+  作，这个我会在SplitInsert详细讨论。
+ 
+- 对于线程安全的GetValue，我们只需一开始对整个哈希表加读锁，而对于bucket页，我们也是请求读锁，这样可以减少锁的竞争。
   
 #### Insert
   
-首先初始化，然后我们调用对应bucketpage的insert方法。然后开始检查，是否因为bucket满了而插入失败，判断条件是!res && bucket_page->IsFull()，因为也有可能存在相同键值对而
-插入失败。如果是这样，我们unpin两个page，开始调用SplitInsert，否则我们我们unpin两个page，结束插入。对于unpin脏位的判断，我一开始是认认真真写，但是后面开始出现数据不一致
-性问题，故除了GetValue之外，我全部都将传入的脏标志改为true。而对于线程安全的Insert，我们一开始对整个哈希表加读锁，而对于bucket页，我们请求写锁，这样可以减少锁的竞争。而万
-一我们需要修改directory，即bucket满了，我们需要分裂插入，我们将读锁升级为写锁，释放bucket的写锁，因为我们已经对整个哈希表加写锁了。
+- 初始化
+  
+- 调用对应bucketpage的insert方法
+  
+- 开始检查，是否因为bucket满了而插入失败，判断条件是!res && bucket_page->IsFull()，因为也有可能存在相同键值对而插入失败。
+  
+- 如果是，我们unpin两个page，开始调用SplitInsert，否则我们我们unpin两个page，结束插入
+  
+- 对于unpin脏位的判断，我一开始是认认真真写，但是后面开始出现数据不一致性问题，故除了GetValue之外，我全部都将传入的脏标志改为true
+  
+- 对于线程安全的Insert，我们一开始对整个哈希表加读锁，而对于bucket页，我们请求写锁，这样可以减少锁的竞争。而万一我们需要修改directory，即bucket满了，我们需要分裂插入，
+  我们将读锁升级为写锁，释放bucket的写锁，因为我们已经对整个哈希表加写锁了。
   
 #### SplitInsert
 
-整个实验最关键最难的两个方法之一，要插入的这个page满了。我们需要分裂。
+整个实验最关键最难的两个方法之一，要插入的这个bucket满了。我们需要分裂。
   
-- 初始化，然后进行判断，局部深度和全局深度是否一致，一致的话我们看是否能够扩展哈希表，也就
-是调用CanIncr()，如果不能，我们在unpin两个page之后exit退出程序。如果可以的话我们调用IncrGlobalDepth()，底层实现上面已经是说明白了。扩展之前，所有和原先要插入的bucket，
-我称为B，它的镜像族深度通通加一。注意，加一后，它的镜像族就变了，数量只有原来一半，如B在directory中的index号为1000，局部深度原来为1，那么它的镜像族是所有最低位为0，并且
-从第五位开始的值都和B的值相同。然后我们再新建一个page，注意上面提到至少三个page就可以满足我们哈希表在内存的运行，ag测试程序也是这样测试，这里说一下哪三个呢，directory，
-满的bucket，和新建的bucket，一共三个。下面我们获取B的真镜像C，接着上面的例子，也就是index号为1010，第二位不同，再获取局部深度2（1+1，第一个1是原来的局部深度）。取所有低
-二位和C一样的，也就是C的真镜像族，将其bucketid改为新建的bucketid。这样就成功完成了分裂。最后取出B中所有数据，清空B。通过哈希函数计算值后取低全局深度位得到bucketindex，
-通过存储的bucketid添加到bucket中。有一个很极端的情况，就是分裂后B中所有数据还是集中在一个bucket中，此时我们需要unpin另一个空的bucket，继续循环上述操作进行分裂。极端情况没
-有出现，我们获取待插入的键值对要插入的page，另一个不需要插入的page我们unpin掉，执行插入，最后unpin两个page，结束。
+- 初始化，然后进行判断，局部深度和全局深度是否一致
+ 
+- 一致则看是能否扩展哈希表，即调用CanIncr()
+  
+- 如果不能，我们在unpin两个page之后exit退出程序。如果可以的话我们调用IncrGlobalDepth()
+ 
+- 扩展哈希表之前，将所有原来属于同一个bucketid的bucketidx集合，成为B，深度通通加一
+  
+- 然后我们再新建一个page，注意上面提到至少三个page就可以满足我们哈希表在内存的运行，ag测试程序也是这样测试，这里说一下哪三个呢，directory，满的bucket，和新建的bucket，一共
+  三个
+  
+- 下面获取原先满bucketidx的镜像族C，其个数刚好为B的二分之一，将其bucketid改为新建的bucketid。这样就成功完成了分裂
+  
+- 取出原先满bucket中所有数据，并且清空之，将它们重新计算哈希分入新建的bucket和原先满（现在被清空）的bucket。有一个很极端的情况，就是分裂后所有数据还是集中在一个bucket中， 
+  此时我们需要unpin另一个空的bucket，继续循环上述操作进行分裂。
+  
+- 若极端情况没有出现，我们获取待插入的键值对要插入的page，另一个不需要插入的page我们unpin掉，执行插入，最后unpin两个page，结束。
   
 
 
 #### Remove
   
-首先初始化，然后我们调用对应bucketpage的remove方法。然后开始检查，和insert很相似。如果出现res && bucket_page->IsEmpty()，即本次的确删除了一个键值对并且导致了bucket空，如
-果单纯判断bucket_page->IsEmpty()有可能之前已经空了，这样如果调用合并是浪费成本，因为之前已经操作过了，本次删除是啥也没有干。那我们就unpin两个page，调用Merge方法合并。对于
-线程安全的Remove方法，我们采取的策略和Insert一模一样
+- 初始化
+  
+- 调用对应bucketpage的remove方法
+  
+- 开始检查，和insert很相似。如果出现res && bucket_page->IsEmpty()，即本次的确删除了一个键值对并且导致了bucket空，如果单纯判断bucket_page->IsEmpty()有可能之前已经空了，
+  这样如果调用合并是浪费成本，因为之前已经操作过了，本次删除是啥也没有干。那我们就unpin两个page，调用Merge方法合并。
+  
+- 如果上述条件不满足，我们unpin两个page结束
+
+- 线程安全的Remove方法，我们采取的策略和Insert一模一样
   
 #### Merge
   
+整个实验最关键最难的两个方法之一，删除后的这个bucket为空。我们检查是否能够合并。
+  
+- 初始化
+ 
+- 获取空镜像B的真镜像C，进行条件判断：B为空并且B和C的局部深度相等，第二个条件很重要，因为有可能B和C局部深度不相等，C大于B，这样的话，是绝对不合适的，以图例
+  
+  idx                id
+  000--------------|  100
+  001--------------|    101
+  010--------------|  100
+  011--------------|   102
+  100--------------|  100
+  101--------------|    101
+  110--------------|  100
+  111--------------|   102
+  
 
+结尾为0的bucketidx假如为空，是绝对不能和结尾为1的bucketidx合并，因为结尾为1的idx自己还没有统一。
 
+- 满足条件，开始循环
+  
+- 将所有是B的bucketidx全部改为C，然后将所有是C的bucketidx局部深度减1，相当于SplitInsert中相关的逆操作
 
-
+- 更新全局遍历，开始新一轮循环，具体为unpin掉B，求C的真镜像D，将C赋值给B，将D赋值给C。
+  
+- 循环结束
+  
+- 收缩到不能收缩为止，unpin两个page，结束
 
 
 ### 相关数据结构在bustub数据库中的位置层级
