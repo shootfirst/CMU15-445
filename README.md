@@ -358,90 +358,155 @@ hashtablebucketpage存储了bucket的内容，大小也是限制在一块磁盘�
 ## lab3
   
 实验三是实现火山模型，将上层的sql查询（可以看成经过SQL解析后的结果）转换为底层对数据库的操作，在实验三，一共分成九大模块，我将不仅仅说明这九大sql操作的实现，还会深入底层
-分析这些操作在底层是如何进行的。一开始sql执行的类图结构是必不可少的，所以我将其提前到现在，本来是最末尾。
+分析这些操作在底层是如何进行的。首先我将对需要阅读的所有类进行分析，下面是这些类的层次结构
   
+### ExecutorContext       
++ Transaction *transaction_
++ Catalog *catalog_  
++ BufferPoolManager *bpm_
++ TransactionManager *txn_mgr_
++ LockManager *lock_mgr_
+  
+### Catalog *catalog_ 
++ BufferPoolManager *bpm_  
++ LockManager *lock_manager_  
++ LogManager *log_manager_    
++ unordered_map<table_oid_t, unique_ptr<TableInfo>> tables_  存储tableid和table的映射关系
++ unordered_map<string, table_oid_t> table_names_  存储tablename和tableid的映射关系      
++ atomic<table_oid_t> next_table_oid_  原子类型，生成tableid  
++ unordered_map<index_oid_t,unique_ptr<IndexInfo>> indexes_  存储indexid和index的关系
++ unordered_map<string, unordered_map<string, index_oid_t>> index_names_  存储tablename indexname和indexid的关系
++ atomic<index_oid_t> next_index_oid_  原子类型，生成indexid
+  
+### TableInfo（table）
++ Schema schema_  相当于表结构
++ string name_  表名字
++ unique_ptr<TableHeap> table_  按表结构存储表的数据，组织形式为tuple，是一个指针
++ table_oid_t oid_  表id  
+  
+### Schema（存储表项）
++ uint32_t length_  一个tuple的长度
++ vector<Column> columns_  所有的列
++ bool tuple_is_inlined_  是否所有的列都是inlined
++ vector<uint32_t> uninlined_columns_  所有uninlined的列
+
+### Column（存储每一个表项内容）
++ string column_name_  列名      
++ TypeId column_type_  列类型
++ uint32_t fixed_length_  
++ uint32_t variable_length_  列变量长度  
++ uint32_t column_offset_  该列在tuple中的偏移量
++ AbstractExpression *expr_  用于创建该列的表达式
+           
+### TableHeap（存储tuple，是数据库存储数据的数据结构）
++ BufferPoolManager *buffer_pool_manager_
++ LockManager *lock_manager_
++ LogManager *log_manager_
++ page_id_t first_page_id_ 存储tuple的第一个pageid，其中记录了pageid链的信息，sql查询的底层就是对这些进行操作
+    
+### tuple（数据库中数据载体）
++ bool allocated_ 是否被分配
++ RID rid_  
++ uint32_t size_  大小
++ char *data_  数据
+
+
+而我们需要写的executer则是在上面表示的数据库中进行操作，对于每个execute，我们实现其init和next方法
+  
+### SEQUENTIAL SCAN
+等价于：select * from table where cond
+table存储在传入的ExecutorContext，而cond存储在SeqScanPlanNode
+  
+#### init
+我们通过传入的ExecutorContext，层层获取底层表，将这个表转换为迭代器，使用迭代器访问，故我们保存这个指向开始的迭代器。
+  
+#### next
+一次返回一个满足where条件的tuple。总的来说我们使用迭代器遍历底层的表，直到tuple满足条件where，我们返回之。注意，这个where条件在SeqScanPlanNode中通过GetPredicate()获取，
+为空表示没有约束条件。故一旦满足条件，我们通过构建value数组构建tuple，返回tue，到末尾则返回false，具体的实现有一个难点，就是需要调各种函数。不过问题不大
+  
+### INSERT
+等价于：insert into table(field1,field2) values(value1,value2)
+table存储在传入的ExecutorContext，value1存储有两种情况，如果是rawinsert，则存储在InsertPlanNode中，如果不是则调用child_executor_的next方法获取。
+  
+#### init
+若child_executor_不为空，我们只需要调用child_executor_的初始化方法即可
+
+#### next
+通过InsertPlanNode的IsRawInsert()进行判断，若是则从plan处调用RawValues()获取待插入值，不是则从child_executor_的Next方法获取插入值。调用TableHeap的InsertTuple插入值，
+同时更新索引。注意必须一口气插入所有value，然后返回false即可。
 
   
+### UPDATE
+等价于：update table set field1=value1 where cond
+table存储在传入的ExecutorContext
+  
+#### init
+若child_executor_不为空，我们只需要调用child_executor_的初始化方法即可
+  
+#### next
+待修改的原tuple全部通过child_executor的Next方法获取，然后调用下面提供的GenerateUpdatedTuple进行更新，注意索引也要同步更新，在完成所有更新之后返回false
+
+### DELETE
+等价于：delete from table where cond
+table存储在传入的ExecutorContext
+  
+#### init
+若child_executor_不为空，我们只需要调用child_executor_的初始化方法即可
+  
+#### next
+where通过child_executor_的next方法获得，调用TableHeap的MarkDelete删除该tuple，同时记住相关索引也必须删除
 
   
-###
+### NESTED LOOP JOIN
   
-###
+#### init
+我们在init的时候，首先对left_executor_和right_executor_执行init，各自调用GetOutputSchema()获取二者输出格式，调用NestedLoopJoinPlanNode的Predicate()获取是否进行连接条
+件。然后调用left_executor_的next为外循环，right_executor_的next为内循环，注意内循环一开始right_executor_调用Init初始化迭代器，通过是否连接条件判断连接。连接后将连接的
+tuple存储在数组中即可，这样留给next使用，为啥要在init中干好这些事呢，因为NESTED LOOP JOIN事pipeline breaker
+  
+#### next
+使用存储连接tuple的数组迭代器，每次返回一个即可
+  
+### HASH JOIN
+首先在头文件中加入哈希表相关代码
+
+#### init
+和上面很类似，但是连接tuple数组的生成，步骤如下，我们设立哈希表保存key->vector<tuple>，然后我们调用HashJoinPlanNode的LeftJoinKeyExpression()->Evaluate方法计算key值，将该
+lefttuple加入该key对应的tuple数组。计算所有的lefttuple之后，我们计算所有righttuple，将key相同的全部连接之。保存于tuple数组供next使用。
+  
+#### next
+使用存储连接tuple的数组迭代器，每次返回一个即可
+
+  
+### AGGREGATION
+
+#### init
+在init方法中，首先对children调用init，
+
+#### next
+  
+### LIMIT
+限制执行次数，只需设立相关字段保存执行次数，每执行一次加1即可
+  
+#### init
+初始化执行次数time，以及调用child_executor_的Init
+
+#### next
+调用LimitPlanNode的GetLimit()获取最大执行次数，当执行次数和child_executor_的Next执行结果为真，我们则返回true，并且将执行次数加1，否则返回false
+  
+### DISTINCT
+
+#### init
+调用GetDistinctKey和GetDistinctValue计算child_executor_->Next获取的tuple，保存在哈希表中
+
+#### next
+使用init新建的哈希表迭代器，一次返回一对键值对即可
   
 ## lab4
   
 
-## bustub中主要类
-  
-ExecutorContext       
-
-+ Transaction *transaction_
-  
-+ Catalog *catalog_
-  
-  - BufferPoolManager *bpm_  
-  - LockManager *lock_manager_  
-  - LogManager *log_manager_  
-    
-  - unordered_map<table_oid_t, unique_ptr<TableInfo>> tables_  存储tableid和table的映射关系
-  
-      + Schema schema_  相当于表结构
-        
-        - uint32_t length_  一个tuple的长度
-  
-        - vector<Column> columns_  所有的列
-  
-            + string column_name_  列名
-              
-            + TypeId column_type_  列类型
-  
-            + uint32_t fixed_length_  
-  
-            + uint32_t variable_length_  列变量长度  
-  
-            + uint32_t column_offset_  该列在tuple中的偏移量
-  
-            + AbstractExpression *expr_  用于创建该列的表达式
-  
-        - bool tuple_is_inlined_  是否所有的列都是inlined
-  
-        - vector<uint32_t> uninlined_columns_  所有uninlined的列
-      
-      + string name_  表名字
-  
-      + unique_ptr<TableHeap> table_  按表结构存储表的数据，组织形式为tuple，是一个指针
-  
-        - BufferPoolManager *buffer_pool_manager_
-        - LockManager *lock_manager_
-        - LogManager *log_manager_
-  
-        - page_id_t first_page_id_ 存储tuple的第一个pageid，其中记录了pageid链的信息，sql查询的底层就是对这些进行操作
-  
-          + tuple
-            - bool allocated_ 是否被分配
-            - RID rid_  
-            - uint32_t size_  大小
-            - char *data_  数据
-  
-      + table_oid_t oid_  表id  
-  
-  - unordered_map<string, table_oid_t> table_names_  存储tablename和tableid的映射关系      
-  - atomic<table_oid_t> next_table_oid_  原子类型，生成tableid
-    
-  - unordered_map<index_oid_t,unique_ptr<IndexInfo>> indexes_  存储indexid和index的关系
-  
-  - unordered_map<string, unordered_map<string, index_oid_t>> index_names_  存储tablename indexname和indexid的关系
-  - atomic<index_oid_t> next_index_oid_  原子类型，生成indexid
-  
-+ BufferPoolManager *bpm_
-+ TransactionManager *txn_mgr_
-+ LockManager *lock_mgr_
 
   
-
-  
-  
-           
 
 
 
