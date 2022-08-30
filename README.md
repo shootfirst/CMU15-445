@@ -336,29 +336,8 @@ hashtablebucketpage存储了bucket的内容，大小也是限制在一块磁盘�
   
 - 初始化
  
-- 获取空镜像B的真镜像C，进行条件判断：B为空并且B和C的局部深度相等，第二个条件很重要，因为有可能B和C局部深度不相等，C大于B，这样的话，是绝对不合适的，以图例
+- 获取空镜像B的真镜像C，进行条件判断：B为空并且B和C的局部深度相等，第二个条件很重要，因为有可能B和C局部深度不相等，C大于B，这样的话，相当于B统一了但是C自己内部还没有统一
   
-  idx                id
-  
-  000--------------|  100
-  
-  001--------------|    101
-  
-  010--------------|  100
-  
-  011--------------|   102
-  
-  100--------------|  100
-  
-  101--------------|    101
-  
-  110--------------|  100
-  
-  111--------------|   102
-  
-
-结尾为0的bucketidx假如为空，是绝对不能和结尾为1的bucketidx合并，因为结尾为1的idx自己还没有统一。
-
 - 满足条件，开始循环
   
 - 将所有是B的bucketidx全部改为C，然后将所有是C的bucketidx局部深度减1，相当于SplitInsert中相关的逆操作
@@ -373,10 +352,96 @@ hashtablebucketpage存储了bucket的内容，大小也是限制在一块磁盘�
 ### 相关数据结构在bustub数据库中的位置层级
 
 实验二实现的是哈希索引，其实不论是哈希索引还是b+树索引，它们的数据结构和存储的数据都是分成一块块地存入磁盘，而相关的机制则是由实验一实现的内存缓冲池实现。
+  
 
+  
+## lab3
+  
+实验三是实现火山模型，将上层的sql查询（可以看成经过SQL解析后的结果）转换为底层对数据库的操作，在实验三，一共分成九大模块，我将不仅仅说明这九大sql操作的实现，还会深入底层
+分析这些操作在底层是如何进行的。一开始sql执行的类图结构是必不可少的，所以我将其提前到现在，本来是最末尾。
+  
 
+  
 
+  
+###
+  
+###
+  
+## lab4
+  
 
+## bustub中主要类
+  
+ExecutorContext       
+
++ Transaction *transaction_
+  
++ Catalog *catalog_
+  
+  - BufferPoolManager *bpm_  
+  - LockManager *lock_manager_  
+  - LogManager *log_manager_  
+    
+  - unordered_map<table_oid_t, unique_ptr<TableInfo>> tables_  存储tableid和table的映射关系
+  
+      + Schema schema_  相当于表结构
+        
+        - uint32_t length_  一个tuple的长度
+  
+        - vector<Column> columns_  所有的列
+  
+            + string column_name_  列名
+              
+            + TypeId column_type_  列类型
+  
+            + uint32_t fixed_length_  
+  
+            + uint32_t variable_length_  列变量长度  
+  
+            + uint32_t column_offset_  该列在tuple中的偏移量
+  
+            + AbstractExpression *expr_  用于创建该列的表达式
+  
+        - bool tuple_is_inlined_  是否所有的列都是inlined
+  
+        - vector<uint32_t> uninlined_columns_  所有uninlined的列
+      
+      + string name_  表名字
+  
+      + unique_ptr<TableHeap> table_  按表结构存储表的数据，组织形式为tuple，是一个指针
+  
+        - BufferPoolManager *buffer_pool_manager_
+        - LockManager *lock_manager_
+        - LogManager *log_manager_
+  
+        - page_id_t first_page_id_ 存储tuple的第一个pageid，其中记录了pageid链的信息，sql查询的底层就是对这些进行操作
+  
+          + tuple
+            - bool allocated_ 是否被分配
+            - RID rid_  
+            - uint32_t size_  大小
+            - char *data_  数据
+  
+      + table_oid_t oid_  表id  
+  
+  - unordered_map<string, table_oid_t> table_names_  存储tablename和tableid的映射关系      
+  - atomic<table_oid_t> next_table_oid_  原子类型，生成tableid
+    
+  - unordered_map<index_oid_t,unique_ptr<IndexInfo>> indexes_  存储indexid和index的关系
+  
+  - unordered_map<string, unordered_map<string, index_oid_t>> index_names_  存储tablename indexname和indexid的关系
+  - atomic<index_oid_t> next_index_oid_  原子类型，生成indexid
+  
++ BufferPoolManager *bpm_
++ TransactionManager *txn_mgr_
++ LockManager *lock_mgr_
+
+  
+
+  
+  
+           
 
 
 
