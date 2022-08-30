@@ -123,27 +123,27 @@ victim也只需pop链表头，从哈希表中删除即可，时间复杂度也�
 
 实验1主要是实现内存缓存池的管理，下面一块很好的说明了bustub对内存缓冲区管理的实现
               
-                                      继承                                                                                                        
-                                    ------> BufferPoolManager <                                                                                   
-                                 /                           |                                                                                    
-                                /                            |
-                    ParallelBufferPoolManager                |                                                                                              
-                              |                              |  继承                                
-                              |                              |                                  
-                    BufferPoolManagerInstance[]              |                                 
-                              |                              |                                  
-                              ------------------->     BufferPoolManagerInstance
-                                                             |
-                                                   /         |             \                    
-                                       
-                             Page[]    DiskManager    LogManager    unordered_map<page_id_t, frame_id_t>    Replacer   list<frame_id_t>
-                                                                                                                |
-                                                                                                                |
-                                                                                                               / \
-                                                                                                       继承   /    \   继承
-                                                                                                             /      \
-                                                                                                  lru_replacer     clock_replacer
-                             
+                        继承                                                                                                        
+                      ------> BufferPoolManager <                                                                                   
+                   /                           |                                                                                    
+                  /                            |
+      ParallelBufferPoolManager                |                                                                                              
+                |                              |  继承                                
+                |                              |                                  
+      BufferPoolManagerInstance[]              |                                 
+                |                              |                                  
+                ------------------->     BufferPoolManagerInstance
+                                               |
+                                     /         |             \                    
+                         
+               Page[]    DiskManager    LogManager    unordered_map<page_id_t, frame_id_t>    Replacer   list<frame_id_t>
+                                                                                                  |
+                                                                                                  |
+                                                                                                 / \
+                                                                                         继承   /    \   继承
+                                                                                               /      \
+                                                                                    lru_replacer     clock_replacer
+               
 
 ## lab2
 
