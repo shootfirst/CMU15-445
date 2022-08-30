@@ -34,6 +34,7 @@ void LRUReplacer::Pin(frame_id_t frame_id) {
   std::lock_guard<std::mutex> lck(latch_);
   auto it = frame_map_.find(frame_id);
   if (it != frame_map_.end()) {
+    // we use this store to change on to o1!!!
     frame_vec_.erase(it->second);
     frame_map_.erase(it);
   }
@@ -48,7 +49,7 @@ void LRUReplacer::Unpin(frame_id_t frame_id) {
     return;
   }
   frame_vec_.push_back(frame_id);
-  frame_map_[frame_id] = frame_map_[frame_id] = --frame_vec_.end();
+  frame_map_[frame_id] = --frame_vec_.end();
 }
 
 auto LRUReplacer::Size() -> size_t { return frame_map_.size(); }

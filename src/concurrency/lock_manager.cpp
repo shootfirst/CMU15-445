@@ -71,7 +71,8 @@ auto LockManager::LockShared(Transaction *txn, const RID &rid) -> bool {
   };
 
   while (!judge_func()) {
-    if (txn->GetState() != TransactionState::ABORTED) {
+    //  is this != ？
+    if (txn->GetState() == TransactionState::ABORTED) {
       break;
     }
     lock_table_[rid].cv_.wait(u_latch);
