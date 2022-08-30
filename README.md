@@ -156,34 +156,159 @@ victim也只需pop链表头，从哈希表中删除即可，时间复杂度也�
 
 #### DIRECTORY
 
-第一个就是directory的IncrGlobalDepth()，不仅仅是简单的加深度即可，还要注意复制前一半的pageid和深度到后一半，当然你去上层去实现这个机理也可。第二个就是GetSplitImageIndex，
-这里的SplitImage概念指导书说自己自然而然会明白，我解释一下，举个栗子，xxxxx1000的SplitImage是xxxxx0000，x的位数是globaldepth-localdepth，代表0或者1，而数字的位数则是
-localdepth。所以获取SplitImage是bucket_idx ^ (1 << (local_depths_[bucket_idx] - 1))。这里获取的是其中一个镜像，这里注意深度为0时调用此方法会报错！！！这里还得区分一下镜像
+首先hashtabledirectorypage保存哈希表的根page，是整个哈希表最基本的数据结构，整个哈希表能够通过该数据结构获取整个哈希表在磁盘中的分布。由于必须要能够存储在一块磁盘下，所以
+对整个数据结构大小有限制，下面是相关字段
+
+- page_id_t page_id_  指示该hashtabledirectorypage存储在哪个pageid中
+
+- lsn_t lsn_          
+
+- uint32_t global_depth_  全局深度，为2的整数次幂，初始值为0
+
+- uint8_t local_depths_[DIRECTORY_ARRAY_SIZE]  记录局部bucket深度，最大为DIRECTORY_ARRAY_SIZE，防止超出一块磁盘大小
+
+- page_id_t bucket_page_ids_[DIRECTORY_ARRAY_SIZE]   记录局部bucket的pageid号，最大为DIRECTORY_ARRAY_SIZE，防止超出一块磁盘大小
+
+##### IncrGlobalDepth 
+
+先是简单的深度+1，然后复制前一半的pageid和localdepth到后一半，去HASH TABLE IMPLEMENTATION去实现这个机理也可。这里我们发现，我们并不需要数组扩容，其实，我们的globaldepth已
+经是控制好了我们能够访问的数组下标范围，为[0, 2^globaldepth - 1]。插入的数据容量不超过约20w，应该是不会造成数组溢出的，其实为了健壮性考虑，我在上层实现了溢出检测，在写实验
+的时候没有实现溢出检测，导致出现了非常奇怪的错误。
+
+##### GetSplitImageIndex
+这里的SplitImage概念指导书说自己会明白，定义：
+
+- 真镜像：a为xxxxx1000，b为xxxxx0000，a的真镜像是b，x的个数是globaldepth-localdepth，代表0或者1，二者所有x代表的位值应该相同而数字的位数则是localdepth。所以获取的真镜像
+  是bucket_idx ^ (1 <<(local_depth_[bucket_idx] - 1))，注意^符号是异或
+
+- 镜像：a为xx1xx1000，globaldepth为9，local_depths
+
+- 镜像族
+
+举个栗子，这里获取的是其中一个镜像，这里注意深度为0时调用此方法会报错！！！这里还得区分一下镜像
 (SplitImage)和镜像族，镜像是镜像族的一个，我这里获取的镜像是只有第localdepth位不同，其他都相同，而镜像族则是所有localdepth-1位都相同，但是第localdepth位不同的所有index集合
 (最高位限制到globaldepth位)，在分裂和合并时镜像族的概念非常重要！！！
 
+##### CanIncr
+
+判断是否能增长，条件为(1 << (global_depth_ + 1)) <= DIRECTORY_ARRAY_SIZE，很容易理解
+
+##### CanShrink
+
+判断是否能收缩，只需要所有localdepth小于globaldepth即可
+
+
+
 #### BUCKET
 
-bucket的删除，删除是位删除，只需要将readable设为0即可，occupied不需置位。最后就是0(1)长数组，这个自行google。
+hashtablebucketpage存储了bucket的内容，大小也是限制在一块磁盘大小，相关字段如下：
+
+- char occupied_[(BUCKET_ARRAY_SIZE - 1) / 8 + 1]  位图，每一个比特位表示该槽是否被占据
+
+- char readable_[(BUCKET_ARRAY_SIZE - 1) / 8 + 1]  位图，每一个比特位表示该槽是否可读，这里解释下占据和可读的关系，可读表示有数据，并且该数据合法（没有被删除），
+                                                   被占据表示有数据，但是合法性不保证（可能被删除，插入数据可以直接写入被占据但是不可读的槽）
+
+- MappingType array_[1]  每一个数组位代表一个槽，存储插入哈希表的数据，这是个0长数组或者1长数组，可自行google，又在cmu学到一个新技巧
+
+##### GetFirstNoOcpBkt
+
+辅助方法之一，获取第一个没有被occupy的位，算法就是简单遍历occupied_数组，之所以没有设置相关字段保存第一个没有被occupy的位，是因为整个数据结构大小已经刚好存入一整块磁盘，
+所以没有添加字段。这几个要存入整块磁盘的数据结构我都没有添加字段
+
+##### GetFirstNoReadBkt
+
+辅助方法之一，获取第一个不可读的位，算法同上
+
+##### Insert
+
+插入，首先遍历哈希表看是否有要插入的kv，若有则直接返回false，没有则找到第一个不可读的位写入要插入的kv（上面提到了），如果找第一个没有被占据的位，这样会大大浪费空间，会导致
+后续10w级别的测试插入后删除，再插入时可能根本插入不进去，因为删除时只会将可读位置为不可读，但是occupied位是不会被修改的
+
+##### Remove
+
+删除，和插入相反，是位删除，只需简单标记位不可读即可，不能修改occupied位
 
 
 ### HASH TABLE IMPLEMENTATION
 
-这个是重点。我提一下fetch和new的调用时机，还有就是flite和merge的思路机理
+大boss来了。首先说明下extendiblehashtable相关字段，需要说明这个数据结构是不需要存入磁盘的。
+
+- page_id_t directory_page_id_                记录存储hashtabledirectory的pageid，是整个哈希表最关键的字段
+
+- BufferPoolManager *buffer_pool_manager_     内存缓冲池管理器，实验一我们已经拿捏
+
+- KeyComparator comparator_                   比较器，用于比较键值对
+
+- ReaderWriterLatch table_latch_              读写锁，用于保护整个哈希表
+
+- HashFunction<KeyType> hash_fn_              哈希函数，传入的值通过此函数计算出哈希值，哈希值取低globaldepth位即为要被存入的bucketid
 
 
-#### FETCH AND NEW
+接下来介绍哈希表的最主要的一些方法
+  
+#### 构造方法
+  
+在构造方法中，我们首先需要新建directory_page的page，调用实验一写的new方法即可。然后unpin之。接下来我们需要新建一个bucket页，同时再获取directory_page，将新建的bucketid
+写入数组下标为0的位置即可，这样我们的哈希表成功新建了directory_page，同时我们还新建了一个bucketpage，用于装填数据。pageid已经写入directorypage中。完成哈希表初始化。最后在
+这里我要说明下带page和不带page的数据结构区别，如hashtabledirectorypage和hashtabledirectory，前者主要是侧重该数据结构存储在磁盘，后者侧重数据结构。当从磁盘读出这块数据结构
+时，是一段字节序列，我们使用cpp自带的强转reinterpret_cast转化为相关数据结构。应该是很好理解。下面的辅助方法会提到
+  
+#### 辅助方法
+  
+- Hash 计算哈希值，哈希值为bucketid号
+  
+- KeyToDirectoryIndex  计算出哈希值，哈希值取低globaldepth位即为要被存入的bucketid
+  
+- FetchDirectoryPage 从内存缓冲区管理器通过directoryid号获取存储hashtabledirectorypage的page，将其中的字节序列强转为hashtabledirectorypage返回
+  
+- FetchBucketPage 同上
+  
+#### GetValue
+  
+首先FetchDirectoryPage，再计算哈希值，获取bucket_idx号，通过DirectoryPage获取数组下标为bucket_idx，得到bucketpageid。再FetchBucketPage。这一系列操作后面的方法一开始基本
+会用到，这就是从内存缓冲池管理器那里获取DirectoryPage，再通过DirectoryPage的bucket_page_ids_获取bucketpageid，通过这个从内存缓冲池管理器那里获取对应bucketpage。后面的
+方法我就简称初始化调用其GetValue即可，最后记得unpinfetch的两个page，否则缓冲区会爆，而且test的检查会很严格，一般对于此哈希表最少只需要3个page即可支持整个哈希表的内存运
+作，这个我会在SplitInsert详细讨论。而对于线程安全的GetValue，我们只需一开始对整个哈希表加读锁，而对于bucket页，我们也是请求读锁，这样可以减少锁的竞争。
+  
+#### Insert
+  
+首先初始化，然后我们调用对应bucketpage的insert方法。然后开始检查，是否因为bucket满了而插入失败，判断条件是!res && bucket_page->IsFull()，因为也有可能存在相同键值对而
+插入失败。如果是这样，我们unpin两个page，开始调用SplitInsert，否则我们我们unpin两个page，结束插入。对于unpin脏位的判断，我一开始是认认真真写，但是后面开始出现数据不一致
+性问题，故除了GetValue之外，我全部都将传入的脏标志改为true。而对于线程安全的Insert，我们一开始对整个哈希表加读锁，而对于bucket页，我们请求写锁，这样可以减少锁的竞争。而万
+一我们需要修改directory，即bucket满了，我们需要分裂插入，我们将读锁升级为写锁，释放bucket的写锁，因为我们已经对整个哈希表加写锁了。
+  
+#### SplitInsert
 
-directory_page_id_在构造方法中需要调用new方法新建一个page，将directory的内容写入其中。bucket的page在构造方法中也需要首先先new一个，将pageid号写入directory中。还有就是在分
-裂flite时需要生成新的bucket，此时也需要调用new方法，其他的任何时机，只需要调用fetch方法！！！如果不这样，会导致你的数据不一致，还有很多奇奇怪怪的错误！！！还有就是每一个
-fetch或者new必须要即时unpin，否则会内存溢出。
+整个实验最关键最难的两个方法之一，要插入的这个page满了。我们需要分裂。
+  
+- 初始化，然后进行判断，局部深度和全局深度是否一致，一致的话我们看是否能够扩展哈希表，也就
+是调用CanIncr()，如果不能，我们在unpin两个page之后exit退出程序。如果可以的话我们调用IncrGlobalDepth()，底层实现上面已经是说明白了。扩展之前，所有和原先要插入的bucket，
+我称为B，它的镜像族深度通通加一。注意，加一后，它的镜像族就变了，数量只有原来一半，如B在directory中的index号为1000，局部深度原来为1，那么它的镜像族是所有最低位为0，并且
+从第五位开始的值都和B的值相同。然后我们再新建一个page，注意上面提到至少三个page就可以满足我们哈希表在内存的运行，ag测试程序也是这样测试，这里说一下哪三个呢，directory，
+满的bucket，和新建的bucket，一共三个。下面我们获取B的真镜像C，接着上面的例子，也就是index号为1010，第二位不同，再获取局部深度2（1+1，第一个1是原来的局部深度）。取所有低
+二位和C一样的，也就是C的真镜像族，将其bucketid改为新建的bucketid。这样就成功完成了分裂。最后取出B中所有数据，清空B。通过哈希函数计算值后取低全局深度位得到bucketindex，
+通过存储的bucketid添加到bucket中。有一个很极端的情况，就是分裂后B中所有数据还是集中在一个bucket中，此时我们需要unpin另一个空的bucket，继续循环上述操作进行分裂。极端情况没
+有出现，我们获取待插入的键值对要插入的page，另一个不需要插入的page我们unpin掉，执行插入，最后unpin两个page，结束。
+  
 
-#### FLITER
+
+#### Remove
+  
+首先初始化，然后我们调用对应bucketpage的remove方法。然后开始检查，和insert很相似。如果出现res && bucket_page->IsEmpty()，即本次的确删除了一个键值对并且导致了bucket空，如
+果单纯判断bucket_page->IsEmpty()有可能之前已经空了，这样如果调用合并是浪费成本，因为之前已经操作过了，本次删除是啥也没有干。那我们就unpin两个page，调用Merge方法合并。对于
+线程安全的Remove方法，我们采取的策略和Insert一模一样
+  
+#### Merge
+  
 
 
 
-#### MERGE
 
+
+
+### 相关数据结构在bustub数据库中的位置层级
+
+实验二实现的是哈希索引，其实不论是哈希索引还是b+树索引，它们的数据结构和存储的数据都是分成一块块地存入磁盘，而相关的机制则是由实验一实现的内存缓冲池实现。
 
 
 
