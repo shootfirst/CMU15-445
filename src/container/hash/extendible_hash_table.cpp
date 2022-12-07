@@ -66,17 +66,64 @@ auto ExtendibleHashTable<K, V>::GetNumBucketsInternal() const -> int {
 
 template <typename K, typename V>
 auto ExtendibleHashTable<K, V>::Find(const K &key, V &value) -> bool {
-  UNREACHABLE("not implemented");
+  size_t dir_index = IndexOf(key);
+  return dir_[dir_index]->Find(key, value);
 }
 
 template <typename K, typename V>
 auto ExtendibleHashTable<K, V>::Remove(const K &key) -> bool {
-  UNREACHABLE("not implemented");
+  size_t dir_index = IndexOf(key);
+  return dir_[dir_index]->Remove(key, value);
 }
 
 template <typename K, typename V>
 void ExtendibleHashTable<K, V>::Insert(const K &key, const V &value) {
-  UNREACHABLE("not implemented");
+  size_t dir_index = IndexOf(key);
+  bool if_not_full = dir_[dir_index]->Insert(key, value);
+
+  // while full
+  while (if_not_full) {
+    old_local_depth = GetLocalDepthInternal(dir_index);
+    if (global_depth_ == old_local_depth) {
+      auto old_full_bucket = dir_[dir_index];
+      std::shared_ptr<Bucket> new_empty_bucket (Bucket(bucket_size_, old_local_depth + 1));
+      global_depth_++;
+      // increase dir_
+      int old_len = dir_.size();
+      int i = 0;
+      for (auto it = dir_.begin(); i < old_len; i++, it++) {
+        dir_.emplace_back(*it);
+      }
+      num_buckets_ *= 2;
+    }
+
+    old_full_bucket->IncrementDepth();
+
+    // find all new image and update their bucket
+    size_t new_local_mask = (1 << old_local_depth + 1) - 1;
+    for (int i = 0; i < num_buckets_; i++) {
+      if ((dir_index & new_local_mask) == (i & new_local_mask)) {
+        dir_[i] = new_empty_bucket;
+      }
+    }
+
+    auto full_data = old_full_bucket->GetItems();
+    // relocate the kv
+    for (auto it = full_data.begin(); it != full_data.end(); it++) {
+      if ((it->first & new_local_mask) == (dir_index & new_local_mask)) {
+        new_empty_bucket->Insert(it->first, it->second);
+        old_full_bucket->delete(it->first, it->second);
+      }
+    }
+
+    // get the new index and insert
+    dir_index = IndexOf(key);
+    if_not_full = dir_[dir_index]->Insert(key, value);
+
+  }
+
+  return true;
+
 }
 
 //===--------------------------------------------------------------------===//
@@ -87,17 +134,42 @@ ExtendibleHashTable<K, V>::Bucket::Bucket(size_t array_size, int depth) : size_(
 
 template <typename K, typename V>
 auto ExtendibleHashTable<K, V>::Bucket::Find(const K &key, V &value) -> bool {
-  UNREACHABLE("not implemented");
+  for (auto it = list_.begin(); it != list_.end(); it++) {
+    if (it->first == key) {
+      value = it->second;
+      return true;
+    }
+  }
+  return false;
 }
 
 template <typename K, typename V>
 auto ExtendibleHashTable<K, V>::Bucket::Remove(const K &key) -> bool {
-  UNREACHABLE("not implemented");
+  for (auto it = list_.begin(); it != list_.end(); it++) {
+    if (it->first == key) {
+      list_.erase(it);
+      return true;
+    }
+  }
+  return false;
 }
 
 template <typename K, typename V>
 auto ExtendibleHashTable<K, V>::Bucket::Insert(const K &key, const V &value) -> bool {
-  UNREACHABLE("not implemented");
+  // if exist, update
+  for (auto it = list_.begin(); it != list_.end(); it++) {
+    if (it->first == key) {
+      it->second = value;
+      return true;
+    }
+  }
+
+  // if full, return false
+  if (list_.size() == size_) return false;
+
+  // emplace back
+  list_.emplace_back(std::make_pair(key, value));
+  return true;
 }
 
 template class ExtendibleHashTable<page_id_t, Page *>;
