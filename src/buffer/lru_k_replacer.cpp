@@ -40,8 +40,8 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
       //-------------------------------------------------------------
       delete info;
       curr_size_--;
-      //-------------------------------------------------------------
       all_cnt_--;
+      //-------------------------------------------------------------
       return true;
     }
   }
@@ -56,8 +56,8 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
       //-------------------------------------------------------------
       delete info;
       curr_size_--;
-      //-------------------------------------------------------------
       all_cnt_--;
+      //-------------------------------------------------------------
       return true;
     }
   }
@@ -112,14 +112,15 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
   }
 
   // if do not exist, we create new info and add it into first_time
-  if (replacer_size_ == all_cnt_) {
-    LOG_INFO("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n");
-    return;
-  }
+  // if (replacer_size_ == all_cnt_) {
+  //   LOG_INFO("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n");
+  //   return;
+  // }
   //-------------------------------------------------------------
   auto new_info = new LruKInfo(frame_id, false);
-  //-------------------------------------------------------------
   all_cnt_++;
+  //-------------------------------------------------------------
+  
   new_info->timestap_list_.push_back(current_timestamp_);
   current_timestamp_++;
 
@@ -190,8 +191,9 @@ void LRUKReplacer::Remove(frame_id_t frame_id) {
       curr_size_--;
     }
     delete info;
-    //-------------------------------------------------------------
     all_cnt_--;
+    //-------------------------------------------------------------
+    
     list_map_.erase(lits_map_it);
     first_time_.erase(list_it);
     return;
@@ -207,8 +209,9 @@ void LRUKReplacer::Remove(frame_id_t frame_id) {
       curr_size_--;
     }
     delete info;
-    //-------------------------------------------------------------
     all_cnt_--;
+    //-------------------------------------------------------------
+    
     tree_map_.erase(tree_map_it);
     k_time_.erase(tree_it);
     return;

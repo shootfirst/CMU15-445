@@ -137,7 +137,7 @@ class LRUKReplacer {
   // Remove maybe_unused if you start using them.
   size_t current_timestamp_{0};
   size_t curr_size_{0};
-  size_t replacer_size_;
+  [[maybe_unused]] size_t replacer_size_;
   size_t k_;
   std::mutex latch_;
 
