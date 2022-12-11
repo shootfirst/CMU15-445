@@ -37,8 +37,10 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
       *frame_id = info->frame_id_;
       first_time_.erase(list_it);
       list_map_.erase(list_map_.find(*frame_id));
+//-------------------------------------------------------------
       delete info;
       curr_size_--;
+//-------------------------------------------------------------
       all_cnt_--;
       return true;
     }
@@ -51,8 +53,10 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
       *frame_id = info->frame_id_;
       k_time_.erase(tree_it);
       tree_map_.erase(tree_map_.find(*frame_id));
+//-------------------------------------------------------------
       delete info;
       curr_size_--;
+//-------------------------------------------------------------
       all_cnt_--;
       return true;
     }
@@ -106,10 +110,12 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
   }
 
   // if do not exist, we create new info and add it into first_time
-  if (replacer_size_ == all_cnt_) {
-    return;
-  }
+  // if (replacer_size_ == all_cnt_) {
+  //   return;
+  // }
+//-------------------------------------------------------------
   auto new_info = new LruKInfo(frame_id, false);
+//-------------------------------------------------------------
   all_cnt_++;
   new_info->timestap_list_.push_back(current_timestamp_++);
 
@@ -130,10 +136,14 @@ void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
     auto list_it = lits_map_it->second;
     info = *list_it;
     if (info->evictable_ && !set_evictable) {
+      //-------------------------------------------------------------
       curr_size_--;
+      //-------------------------------------------------------------
       info->evictable_ = set_evictable;
     } else if (!info->evictable_ && set_evictable) {
+      //-------------------------------------------------------------
       curr_size_++;
+      //-------------------------------------------------------------
       info->evictable_ = set_evictable;
     }
     return;
@@ -145,10 +155,14 @@ void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
     auto tree_it = tree_map_it->second;
     info = tree_it->second;
     if (info->evictable_ && !set_evictable) {
+      //-------------------------------------------------------------
       curr_size_--;
+      //-------------------------------------------------------------
       info->evictable_ = set_evictable;
     } else if (!info->evictable_ && set_evictable) {
+      //-------------------------------------------------------------
       curr_size_++;
+      //-------------------------------------------------------------
       info->evictable_ = set_evictable;
     }
     return;
@@ -159,7 +173,7 @@ void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
 
 void LRUKReplacer::Remove(frame_id_t frame_id) {
   std::lock_guard<std::mutex> lck(latch_);
-  
+
   LruKInfo *info;
 
   // First find in first_time_
@@ -167,9 +181,12 @@ void LRUKReplacer::Remove(frame_id_t frame_id) {
   if (lits_map_it != nullptr) {
     auto list_it = lits_map_it->second;
     info = *list_it;
+    //-------------------------------------------------------------
     if (info->evictable_) {
       curr_size_--;
     }
+    delete info;
+    //-------------------------------------------------------------
     all_cnt_--;
     list_map_.erase(lits_map_it);
     first_time_.erase(list_it);
@@ -181,9 +198,12 @@ void LRUKReplacer::Remove(frame_id_t frame_id) {
   if (tree_map_it != nullptr) {
     auto tree_it = tree_map_it->second;
     info = tree_it->second;
+     //-------------------------------------------------------------
     if (info->evictable_) {
       curr_size_--;
     }
+    delete info;
+    //-------------------------------------------------------------
     all_cnt_--;
     tree_map_.erase(tree_map_it);
     k_time_.erase(tree_it);

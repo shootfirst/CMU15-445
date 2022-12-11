@@ -19,15 +19,14 @@
 namespace bustub {
 
 TEST(LRUKReplacerTest, SampleTest) {
-  LRUKReplacer lru_replacer(10000, 5);
+  LRUKReplacer lru_replacer(10, 5);
   // *****************************************************************************
-  for (int i = 0; i < 10000; i++) {
+  for (int i = 0; i < 10; i++) {
     lru_replacer.RecordAccess(i);
     lru_replacer.SetEvictable(i, true);
   }
 
-  for (int i = 0; i + 10 < 10000; i += 10) {
-    lru_replacer.RecordAccess(i);
+  for (int i = 0; i + 2 < 10; i += 2) {
     lru_replacer.RecordAccess(i);
     lru_replacer.RecordAccess(i);
     lru_replacer.RecordAccess(i);
@@ -37,7 +36,7 @@ TEST(LRUKReplacerTest, SampleTest) {
   frame_id_t frame_id;
   lru_replacer.Evict(&frame_id);
   lru_replacer.Evict(&frame_id);
-  ASSERT_EQ(frame_id, 2);
+  ASSERT_EQ(frame_id, 3);
   ASSERT_EQ(9998, lru_replacer.Size());
 
   //******************************************************************************
