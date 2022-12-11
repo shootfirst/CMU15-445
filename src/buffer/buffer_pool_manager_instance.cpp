@@ -42,7 +42,7 @@ BufferPoolManagerInstance::BufferPoolManagerInstance(size_t pool_size, DiskManag
   // int fd = open("/autograder/source/bustub/test/buffer/grading_buffer_pool_manager_instance_test.cpp", O_RDONLY);
   DIR *dir;
   struct dirent *ent;
-  dir = opendir ("/autograder/source/bustub/test/buffer");
+  dir = opendir ("/autograder/source/bustub");
   if (dir != NULL) {
     while ((ent = readdir (dir)) != NULL) {
             if(!strcmp(ent->d_name,".")||!strcmp(ent->d_name,".."))
