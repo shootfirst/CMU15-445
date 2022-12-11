@@ -29,7 +29,6 @@ void evictt() {
 }
 
 TEST(LRUKReplacerTest, SampleTest) {
-  
   // // *****************************************************************************
   // for (int i = 0; i < 10000; i++) {
   //   lru_replacer.RecordAccess(i);

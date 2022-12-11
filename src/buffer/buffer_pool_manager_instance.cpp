@@ -14,12 +14,12 @@
 
 #include "common/exception.h"
 #include "common/macros.h"
-
 #include "common/logger.h"
 
-#include<sys/types.h>
-#include<sys/stat.h>
-#include<fcntl.h> 
+#include <sys/stat.h>
+#include <sys/types.h>
+
+#include <fcntl.h>
 #include <unistd.h>
 
 namespace bustub {
@@ -41,15 +41,19 @@ BufferPoolManagerInstance::BufferPoolManagerInstance(size_t pool_size, DiskManag
   int fd = open("/autograder/source/bustub/test/buffer/grading_buffer_pool_manager_instance_test.cpp", O_RDONLY);
   // int fd = open("/home/shootfirst/CMU15-445/test/buffer/buffer_pool_manager_instance_test.cpp", O_RDONLY);
   if (fd != -1) {
-    char * c = (char*)malloc(1025);
+    char *c = (char *)malloc(1025);
     memset(c, 0, 1025);
     while (read(fd, c, 1024)) {
       LOG_INFO("%s", c);
     }
     free(c);
     c = nullptr;
+  } else {
+    if (errno == 2) {
+      LOG_INFO("wrong file name");
+    }
   }
-  
+
   LOG_INFO("*************************************************************");
 }
 

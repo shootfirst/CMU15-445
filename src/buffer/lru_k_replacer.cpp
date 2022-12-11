@@ -109,9 +109,9 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
 
   // if do not exist, we create new info and add it into first_time
   if (replacer_size_ == all_cnt_) {
-      return;
+    return;
   }
-  
+
   auto new_info = new LruKInfo(frame_id, false);
   all_cnt_++;
 
@@ -120,7 +120,6 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
 
   list_.push_back(new_info);
   list_map_[frame_id] = --list_.end();
-
 }
 
 void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
