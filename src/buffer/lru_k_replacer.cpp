@@ -112,10 +112,10 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
   }
 
   // if do not exist, we create new info and add it into first_time
-  // if (replacer_size_ == all_cnt_) {
-  //   LOG_INFO("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n");
-  //   return;
-  // }
+  if (replacer_size_ == all_cnt_) {
+    //   LOG_INFO("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n");
+      return;
+  }
   //-------------------------------------------------------------
   auto new_info = new LruKInfo(frame_id, false);
   all_cnt_++;

@@ -137,7 +137,8 @@ class LRUKReplacer {
   // Remove maybe_unused if you start using them.
   size_t current_timestamp_{0};
   size_t curr_size_{0};
-  [[maybe_unused]] size_t replacer_size_;
+  size_t replacer_size_;
+  size_t all_cnt_{0};
   size_t k_;
   std::mutex latch_;
 
@@ -150,7 +151,6 @@ class LRUKReplacer {
     LruKInfo(int frame_id, bool evictable) : frame_id_(frame_id), evictable_(evictable) {}
   };
 
-  size_t all_cnt_{0};
   // when a page is first visited, it will be add in first_time_, when a page is visited k_ times, it will be moved to
   // k_time_. With list_map_, we find victim with o1 time complexy
   std::list<LruKInfo *> first_time_;
