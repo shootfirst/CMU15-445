@@ -14,9 +14,11 @@
 
 #include "gtest/gtest.h"
 
+#include "common/logger.h"
+
 namespace bustub {
 
-TEST(LRUKReplacerTest, DISABLED_SampleTest) {
+TEST(LRUKReplacerTest, SampleTest) {
   LRUKReplacer lru_replacer(7, 2);
 
   // Scenario: add six elements to the replacer. We have [1,2,3,4,5]. Frame 6 is non-evictable.
@@ -51,6 +53,7 @@ TEST(LRUKReplacerTest, DISABLED_SampleTest) {
 
   // Scenario: Now replacer has frames [5,1].
   // Insert new frames 3, 4, and update access history for 5. We should end with [3,1,5,4]
+
   lru_replacer.RecordAccess(3);
   lru_replacer.RecordAccess(4);
   lru_replacer.RecordAccess(5);
@@ -77,7 +80,6 @@ TEST(LRUKReplacerTest, DISABLED_SampleTest) {
   ASSERT_EQ(true, lru_replacer.Evict(&value));
   ASSERT_EQ(5, value);
   ASSERT_EQ(1, lru_replacer.Size());
-
   // Update access history for 1. Now we have [4,1]. Next victim is 4.
   lru_replacer.RecordAccess(1);
   lru_replacer.RecordAccess(1);
