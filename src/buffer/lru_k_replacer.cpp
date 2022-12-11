@@ -74,7 +74,8 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
   if (list_map_it != nullptr) {
     auto list_it = list_map_it->second;
     LruKInfo *info = (*list_it);
-    info->timestap_list_.push_back(current_timestamp_++);
+    info->timestap_list_.push_back(current_timestamp_);
+    current_timestamp_++;
 
     if (info->timestap_list_.size() == k_) {
       // delete from first_time_
@@ -96,7 +97,8 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
     // delete old last kth timestap
     info->timestap_list_.pop_front();
     // add new visited time_stap
-    info->timestap_list_.push_back(current_timestamp_++);
+    info->timestap_list_.push_back(current_timestamp_);
+    current_timestamp_++;
 
     // we need update last kth timestap, so we firwst delete it, and add it with new last kth timestap
     // (这里顺序不能倒换)
@@ -118,7 +120,8 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
   auto new_info = new LruKInfo(frame_id, false);
   //-------------------------------------------------------------
   all_cnt_++;
-  new_info->timestap_list_.push_back(current_timestamp_++);
+  new_info->timestap_list_.push_back(current_timestamp_);
+  current_timestamp_++;
 
   first_time_.push_back(new_info);
   list_map_[frame_id] = --first_time_.end();

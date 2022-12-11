@@ -19,36 +19,26 @@
 namespace bustub {
 
 TEST(LRUKReplacerTest, SampleTest) {
-  LRUKReplacer lru_replacer(10, 2);
+  LRUKReplacer lru_replacer(10000, 2);
   // *****************************************************************************
-  for (int i = 0; i < 10; i++) {
+  for (int i = 0; i < 10000; i++) {
     lru_replacer.RecordAccess(i);
     lru_replacer.SetEvictable(i, true);
   }
 
-  for (int i = 0; i + 2 < 10; i += 2) {
+  for (int i = 0; i < 10000; i += 2) {
     lru_replacer.RecordAccess(i);
   }
   // 1 3 5 7 9
   // 0 2 4 6 8
 
   frame_id_t frame_id;
-  lru_replacer.Evict(&frame_id);
-  ASSERT_EQ(frame_id, 1);
-  lru_replacer.Evict(&frame_id);
-  ASSERT_EQ(frame_id, 3);
-  lru_replacer.Evict(&frame_id);
-  ASSERT_EQ(frame_id, 5);
-  lru_replacer.Evict(&frame_id);
-  ASSERT_EQ(frame_id, 7);
-  lru_replacer.Evict(&frame_id);
-  ASSERT_EQ(frame_id, 9);
-  lru_replacer.Evict(&frame_id);
-  ASSERT_EQ(frame_id, 0);
-  lru_replacer.Evict(&frame_id);
-  ASSERT_EQ(frame_id, 2);
-
-  ASSERT_EQ(3, lru_replacer.Size());
+  for (int i = 0; i < 5000; i ++) {
+    lru_replacer.Evict(&frame_id);
+    ASSERT_EQ(frame_id, 2 * i + 1);
+  }
+  
+  ASSERT_EQ(5000, lru_replacer.Size());
 
   //******************************************************************************
 
