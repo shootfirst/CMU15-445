@@ -32,14 +32,14 @@ BufferPoolManagerInstance::BufferPoolManagerInstance(size_t pool_size, DiskManag
     free_list_.emplace_back(static_cast<int>(i));
   }
 
-  LOG_INFO("*************************************************************");
-  std::ifstream file("/autograder/source/bustub/test/buffer/grading_lru_k_replacer_test.cpp");
-  std::string str;
-  while (file.good()) {
-    std::getline(file, str);
-    LOG_INFO("%s", str.c_str());
-  }
-  LOG_INFO("*************************************************************");
+  // LOG_INFO("*************************************************************");
+  // std::ifstream file("/autograder/source/bustub/test/buffer/grading_lru_k_replacer_test.cpp");
+  // std::string str;
+  // while (file.good()) {
+  //   std::getline(file, str);
+  //   LOG_INFO("%s", str.c_str());
+  // }
+  // LOG_INFO("*************************************************************");
 }
 
 BufferPoolManagerInstance::~BufferPoolManagerInstance() {

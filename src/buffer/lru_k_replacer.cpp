@@ -120,7 +120,7 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
   auto new_info = new LruKInfo(frame_id, false);
   all_cnt_++;
   //-------------------------------------------------------------
-  
+
   new_info->timestap_list_.push_back(current_timestamp_);
   current_timestamp_++;
 
@@ -193,7 +193,7 @@ void LRUKReplacer::Remove(frame_id_t frame_id) {
     delete info;
     all_cnt_--;
     //-------------------------------------------------------------
-    
+
     list_map_.erase(lits_map_it);
     first_time_.erase(list_it);
     return;
@@ -211,7 +211,7 @@ void LRUKReplacer::Remove(frame_id_t frame_id) {
     delete info;
     all_cnt_--;
     //-------------------------------------------------------------
-    
+
     tree_map_.erase(tree_map_it);
     k_time_.erase(tree_it);
     return;

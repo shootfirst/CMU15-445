@@ -33,11 +33,11 @@ TEST(LRUKReplacerTest, SampleTest) {
   // 0 2 4 6 8
 
   frame_id_t frame_id;
-  for (int i = 0; i < 5000; i ++) {
+  for (int i = 0; i < 5000; i++) {
     lru_replacer.Evict(&frame_id);
     ASSERT_EQ(frame_id, 2 * i + 1);
   }
-  
+
   ASSERT_EQ(5000, lru_replacer.Size());
 
   //******************************************************************************
