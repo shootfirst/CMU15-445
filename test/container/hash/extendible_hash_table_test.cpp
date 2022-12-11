@@ -12,7 +12,7 @@ namespace bustub {
 
 TEST(ExtendibleHashTableTest, SampleTest) {
   auto table = std::make_unique<ExtendibleHashTable<int, std::string>>(2);
-  
+
   table->Insert(1, "a");
   table->Insert(2, "b");
   table->Insert(3, "c");

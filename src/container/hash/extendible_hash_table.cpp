@@ -24,10 +24,10 @@ namespace bustub {
 template <typename K, typename V>
 ExtendibleHashTable<K, V>::ExtendibleHashTable(size_t bucket_size)
     : global_depth_(0), bucket_size_(bucket_size), num_buckets_(1) {
-      // create the first bucket
-      std::shared_ptr<Bucket> first_bucket (new Bucket(bucket_size, 0));
-      dir_.push_back(first_bucket);
-    }
+  // create the first bucket
+  std::shared_ptr<Bucket> first_bucket(new Bucket(bucket_size, 0));
+  dir_.push_back(first_bucket);
+}
 
 template <typename K, typename V>
 auto ExtendibleHashTable<K, V>::IndexOf(const K &key) -> size_t {
@@ -93,14 +93,12 @@ void ExtendibleHashTable<K, V>::Insert(const K &key, const V &value) {
 
   // while full
   while (!if_not_full) {
-
     int old_local_depth = GetLocalDepthInternal(dir_index);
 
     // decide if we should increase global depth
     if (global_depth_ == old_local_depth) {
-
       global_depth_++;
-    
+
       // increase dir_
       int old_len = dir_.size();
       dir_.resize(dir_.size() * 2);
@@ -108,10 +106,10 @@ void ExtendibleHashTable<K, V>::Insert(const K &key, const V &value) {
         dir_[i + old_len] = dir_[i];
       }
     }
-    
+
     // get the old and new bucket
     auto old_full_bucket = dir_[dir_index];
-    std::shared_ptr<Bucket> new_empty_bucket (new Bucket(bucket_size_, old_local_depth + 1));
+    std::shared_ptr<Bucket> new_empty_bucket(new Bucket(bucket_size_, old_local_depth + 1));
     num_buckets_++;
 
     // increase local depth
@@ -139,9 +137,7 @@ void ExtendibleHashTable<K, V>::Insert(const K &key, const V &value) {
     // get the new index and insert
     dir_index = IndexOf(key);
     if_not_full = dir_[dir_index]->Insert(key, value);
-    
   }
-
 }
 
 //===--------------------------------------------------------------------===//
@@ -183,7 +179,9 @@ auto ExtendibleHashTable<K, V>::Bucket::Insert(const K &key, const V &value) -> 
   }
 
   // if full, return false
-  if (list_.size() == size_) return false;
+  if (list_.size() == size_) {
+    return false;
+  }
 
   // emplace back
   list_.emplace_back(std::make_pair(key, value));
