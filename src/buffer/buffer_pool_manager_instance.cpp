@@ -36,6 +36,7 @@ BufferPoolManagerInstance::BufferPoolManagerInstance(size_t pool_size, DiskManag
   std::ifstream file("/autograder/source/bustub/test/buffer/grading_buffer_pool_manager_instance_test.cpp");
   std::string str;
   while (file.good()) {
+    LOG_INFO("good");
     std::getline(file, str);
     LOG_INFO("%s", str.c_str());
   }
