@@ -26,13 +26,9 @@ TEST(LRUKReplacerTest, SampleTest) {
     lru_replacer.SetEvictable(i, true);
   }
 
-  
-  lru_replacer.RecordAccess(0);
-  lru_replacer.RecordAccess(2);
-  lru_replacer.RecordAccess(4);
-  lru_replacer.RecordAccess(6);
-  lru_replacer.RecordAccess(8);
-  
+  for (int i = 0; i + 2 < 10; i += 2) {
+    lru_replacer.RecordAccess(i);
+  }
   // 1 3 5 7 9
   // 0 2 4 6 8
 

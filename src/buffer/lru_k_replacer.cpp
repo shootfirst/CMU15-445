@@ -37,10 +37,10 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
       *frame_id = info->frame_id_;
       first_time_.erase(list_it);
       list_map_.erase(list_map_.find(*frame_id));
-//-------------------------------------------------------------
+      //-------------------------------------------------------------
       delete info;
       curr_size_--;
-//-------------------------------------------------------------
+      //-------------------------------------------------------------
       all_cnt_--;
       return true;
     }
@@ -53,10 +53,10 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
       *frame_id = info->frame_id_;
       k_time_.erase(tree_it);
       tree_map_.erase(tree_map_.find(*frame_id));
-//-------------------------------------------------------------
+      //-------------------------------------------------------------
       delete info;
       curr_size_--;
-//-------------------------------------------------------------
+      //-------------------------------------------------------------
       all_cnt_--;
       return true;
     }
@@ -114,9 +114,9 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
     LOG_INFO("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n");
     return;
   }
-//-------------------------------------------------------------
+  //-------------------------------------------------------------
   auto new_info = new LruKInfo(frame_id, false);
-//-------------------------------------------------------------
+  //-------------------------------------------------------------
   all_cnt_++;
   new_info->timestap_list_.push_back(current_timestamp_++);
 
@@ -199,7 +199,7 @@ void LRUKReplacer::Remove(frame_id_t frame_id) {
   if (tree_map_it != nullptr) {
     auto tree_it = tree_map_it->second;
     info = tree_it->second;
-     //-------------------------------------------------------------
+    //-------------------------------------------------------------
     if (info->evictable_) {
       curr_size_--;
     }
