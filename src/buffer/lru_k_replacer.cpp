@@ -218,23 +218,21 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
 
   size_t min = 1000000;
   bool less_than_k = false;
-  for (auto evictable_map_it_ = evictable_map_.begin(); evictable_map_it_ != evictable_map_.end(); evictable_map_it_++) {
-    if (!less_than_k && evictable_map_it_->second->timestap_list_.size() < k_) {
+  for (auto &evictable_map_it : evictable_map_) {
+    if (!less_than_k && evictable_map_it.second->timestap_list_.size() < k_) {
       less_than_k = true;
-      *frame_id = evictable_map_it_->second->frame_id_;
-      min = evictable_map_it_->second->timestap_list_.front();
+      *frame_id = evictable_map_it.second->frame_id_;
+      min = evictable_map_it.second->timestap_list_.front();
     }
 
-    if (less_than_k && evictable_map_it_->second->timestap_list_.size() < k_) {
-      if (evictable_map_it_->second->timestap_list_.front() < min) {
-        *frame_id = evictable_map_it_->second->frame_id_;
-        min = evictable_map_it_->second->timestap_list_.front();
-      }
-    } else if (!less_than_k) {
-      if (evictable_map_it_->second->timestap_list_.front() < min) {
-        *frame_id = evictable_map_it_->second->frame_id_;
-        min = evictable_map_it_->second->timestap_list_.front();
-      }
+    if (less_than_k && evictable_map_it.second->timestap_list_.size() < k_ &&
+        evictable_map_it.second->timestap_list_.front() < min) {
+      *frame_id = evictable_map_it.second->frame_id_;
+      min = evictable_map_it.second->timestap_list_.front();
+    }
+    if (!less_than_k && evictable_map_it.second->timestap_list_.front() < min) {
+      *frame_id = evictable_map_it.second->frame_id_;
+      min = evictable_map_it.second->timestap_list_.front();
     }
   }
 
@@ -262,7 +260,6 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
       info->timestap_list_.pop_front();
     }
   } else {
-
     if (no_evictable_map_.size() + evictable_map_.size() == replacer_size_) {
       return;
     }
@@ -271,12 +268,11 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
     info->frame_id_ = frame_id;
     no_evictable_map_[frame_id] = info;
   }
-  
 }
 
 void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
   std::lock_guard<std::mutex> lck(latch_);
-  
+
   if (!set_evictable && evictable_map_.find(frame_id) != nullptr) {
     auto info = evictable_map_[frame_id];
     info->evictable_ = false;

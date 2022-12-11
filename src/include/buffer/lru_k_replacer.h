@@ -157,8 +157,8 @@ class LRUKReplacer {
   // std::map<size_t, LruKInfo *> tree_;
   // std::unordered_map<frame_id_t, std::map<size_t, LruKInfo *>::iterator> tree_map_;
 
-  std::unordered_map<frame_id_t, LruKInfo*> evictable_map_;
-  std::unordered_map<frame_id_t, LruKInfo*> no_evictable_map_;
+  std::unordered_map<frame_id_t, LruKInfo *> evictable_map_;
+  std::unordered_map<frame_id_t, LruKInfo *> no_evictable_map_;
 };
 
 }  // namespace bustub
