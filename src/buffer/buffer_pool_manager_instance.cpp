@@ -13,15 +13,8 @@
 #include "buffer/buffer_pool_manager_instance.h"
 
 #include "common/exception.h"
-#include "common/macros.h"
 #include "common/logger.h"
-
-#include <sys/stat.h>
-#include <sys/types.h>
-
-#include <fcntl.h>
-#include <unistd.h>
-#include <dirent.h>
+#include "common/macros.h"
 
 namespace bustub {
 
@@ -37,38 +30,6 @@ BufferPoolManagerInstance::BufferPoolManagerInstance(size_t pool_size, DiskManag
   for (size_t i = 0; i < pool_size_; ++i) {
     free_list_.emplace_back(static_cast<int>(i));
   }
-
-  LOG_INFO("*************************************************************");
-  // int fd = open("/autograder/source/bustub/test/buffer/grading_buffer_pool_manager_instance_test.cpp", O_RDONLY);
-  DIR *dir;
-  struct dirent *ent;
-  dir = opendir ("/autograder/source/bustub");
-  if (dir != NULL) {
-    while ((ent = readdir (dir)) != NULL) {
-            if(!strcmp(ent->d_name,".")||!strcmp(ent->d_name,".."))
-                continue;
-            LOG_INFO("%s", ent->d_name);
-        }
-        closedir (dir);
-  }
-  // int fd = open("/home/shootfirst/CMU15-445/test/buffer", O_RDONLY);
-  // if (fd != -1) {
-    
-  //   // char *c = (char *)malloc(1025);
-  //   // memset(c, 0, 1025);
-  //   // while (read(fd, c, 1024)) {
-  //   //   LOG_INFO("%s", c);
-  //   // }
-  //   // free(c);
-  //   // c = nullptr;
-  //   LOG_INFO("right file name");
-  // } else {
-  //   if (errno == 2) {
-  //     LOG_INFO("wrong file name");
-  //   }
-  // }
-
-  LOG_INFO("*************************************************************");
 }
 
 BufferPoolManagerInstance::~BufferPoolManagerInstance() {

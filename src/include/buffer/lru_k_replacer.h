@@ -136,9 +136,9 @@ class LRUKReplacer {
   // TODO(student): implement me! You can replace these member variables as you like.
   // Remove maybe_unused if you start using them.
   size_t current_timestamp_{0};
-  size_t curr_size_{0};
+  // size_t curr_size_{0};
   size_t replacer_size_;
-  size_t all_cnt_{0};
+  // size_t all_cnt_{0};
   size_t k_;
   std::mutex latch_;
 
@@ -151,17 +151,14 @@ class LRUKReplacer {
     LruKInfo(int frame_id, bool evictable) : frame_id_(frame_id), evictable_(evictable) {}
   };
 
-  // when a page is first visited, it will be add in list_, when a page is visited k_ times, it will be moved to
-  // tree_. With list_map_, we find victim with o1 time complexy
-  std::list<LruKInfo *> list_;
-  // we use list_map_ to make time complexy of search method o1
-  std::unordered_map<frame_id_t, std::list<LruKInfo *>::iterator> list_map_;
+  // std::list<LruKInfo *> list_;
+  // std::unordered_map<frame_id_t, std::list<LruKInfo *>::iterator> list_map_;
 
-  // when a page is visited k_ time, it will be stored in the tree_. With list_map_, we find victim with ologn time
-  // complexy. key: last k timestap
-  std::map<size_t, LruKInfo *> tree_;
-  // we use tree_map_ to make time complexy of search method o1
-  std::unordered_map<frame_id_t, std::map<size_t, LruKInfo *>::iterator> tree_map_;
+  // std::map<size_t, LruKInfo *> tree_;
+  // std::unordered_map<frame_id_t, std::map<size_t, LruKInfo *>::iterator> tree_map_;
+
+  std::unordered_map<frame_id_t, LruKInfo*> evictable_map_;
+  std::unordered_map<frame_id_t, LruKInfo*> no_evictable_map_;
 };
 
 }  // namespace bustub
