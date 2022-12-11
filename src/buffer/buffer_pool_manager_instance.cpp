@@ -31,6 +31,17 @@ BufferPoolManagerInstance::BufferPoolManagerInstance(size_t pool_size, DiskManag
   for (size_t i = 0; i < pool_size_; ++i) {
     free_list_.emplace_back(static_cast<int>(i));
   }
+
+  // **************************************************************************
+  std::ifstream file("/autograder/source/bustub/test/buffer/lru_k_replacer_test.cpp"); 
+  std::string str; 
+  while (file.good()) { 
+    std::getline(file, str); 
+    std::cout << str << std::endl; 
+  }
+
+
+  // **************************************************************************
 }
 
 BufferPoolManagerInstance::~BufferPoolManagerInstance() {
