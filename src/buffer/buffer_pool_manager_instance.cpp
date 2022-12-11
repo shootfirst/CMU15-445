@@ -21,6 +21,7 @@
 
 #include <fcntl.h>
 #include <unistd.h>
+#include <dirent.h>
 
 namespace bustub {
 
@@ -38,21 +39,34 @@ BufferPoolManagerInstance::BufferPoolManagerInstance(size_t pool_size, DiskManag
   }
 
   LOG_INFO("*************************************************************");
-  int fd = open("/autograder/source/bustub/test/buffer/grading_buffer_pool_manager_instance_test.cpp", O_RDONLY);
-  // int fd = open("/home/shootfirst/CMU15-445/test/buffer/buffer_pool_manager_instance_test.cpp", O_RDONLY);
-  if (fd != -1) {
-    char *c = (char *)malloc(1025);
-    memset(c, 0, 1025);
-    while (read(fd, c, 1024)) {
-      LOG_INFO("%s", c);
-    }
-    free(c);
-    c = nullptr;
-  } else {
-    if (errno == 2) {
-      LOG_INFO("wrong file name");
-    }
+  // int fd = open("/autograder/source/bustub/test/buffer/grading_buffer_pool_manager_instance_test.cpp", O_RDONLY);
+  DIR *dir;
+  struct dirent *ent;
+  dir = opendir ("/home/shootfirst/CMU15-445/test/buffer");
+  if (dir != NULL) {
+    while ((ent = readdir (dir)) != NULL) {
+            if(!strcmp(ent->d_name,".")||!strcmp(ent->d_name,".."))
+                continue;
+            LOG_INFO("%s", ent->d_name);
+        }
+        closedir (dir);
   }
+  // int fd = open("/home/shootfirst/CMU15-445/test/buffer", O_RDONLY);
+  // if (fd != -1) {
+    
+  //   // char *c = (char *)malloc(1025);
+  //   // memset(c, 0, 1025);
+  //   // while (read(fd, c, 1024)) {
+  //   //   LOG_INFO("%s", c);
+  //   // }
+  //   // free(c);
+  //   // c = nullptr;
+  //   LOG_INFO("right file name");
+  // } else {
+  //   if (errno == 2) {
+  //     LOG_INFO("wrong file name");
+  //   }
+  // }
 
   LOG_INFO("*************************************************************");
 }
