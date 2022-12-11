@@ -34,7 +34,7 @@ BufferPoolManagerInstance::BufferPoolManagerInstance(size_t pool_size, DiskManag
 
   // **************************************************************************
   LOG_INFO("*************************************************************");
-  std::ifstream file("/autograder/source/bustub/test/buffer/lru_k_replacer_test.cpp");
+  std::ifstream file("/autograder/source/bustub/test/buffer/grading_lru_k_replacer_test.cpp");
   std::string str;
   while (file.good()) {
      std::getline(file, str);

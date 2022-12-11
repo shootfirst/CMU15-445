@@ -63,8 +63,8 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
 }
 
 void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
-  // LOG_INFO("frame_id %d\n", frame_id);
   std::lock_guard<std::mutex> lck(latch_);
+
   // first we find in first_time_
   auto list_map_it = list_map_.find(frame_id);
   if (list_map_it != nullptr) {
@@ -121,7 +121,6 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
 }
 
 void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
-  // LOG_INFO("frame_id %d if %d\n", frame_id, set_evictable);
   std::lock_guard<std::mutex> lck(latch_);
   LruKInfo *info;
 
@@ -160,6 +159,7 @@ void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
 
 void LRUKReplacer::Remove(frame_id_t frame_id) {
   std::lock_guard<std::mutex> lck(latch_);
+  
   LruKInfo *info;
 
   // First find in first_time_
