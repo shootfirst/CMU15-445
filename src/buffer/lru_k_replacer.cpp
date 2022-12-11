@@ -28,7 +28,7 @@ LRUKReplacer::~LRUKReplacer() {
 }
 
 auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
-  std::scoped_lock<std::mutex> lock(latch_);
+  std::lock_guard<std::mutex> lck(latch_);
 
   // When multipe frames have +inf backward k-distance, the replacer evicts the frame with the earliest timestamp.
   for (auto list_it = first_time_.begin(); list_it != first_time_.end(); list_it++) {
@@ -67,7 +67,7 @@ auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
 }
 
 void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
-  std::scoped_lock<std::mutex> lock(latch_);
+  std::lock_guard<std::mutex> lck(latch_);
 
   // first we find in first_time_
   auto list_map_it = list_map_.find(frame_id);
@@ -114,7 +114,7 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
   // if do not exist, we create new info and add it into first_time
   if (replacer_size_ == all_cnt_) {
     //   LOG_INFO("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n");
-    return;
+      return;
   }
   //-------------------------------------------------------------
   auto new_info = new LruKInfo(frame_id, false);
@@ -132,7 +132,7 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
 }
 
 void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
-  std::scoped_lock<std::mutex> lock(latch_);
+  std::lock_guard<std::mutex> lck(latch_);
   LruKInfo *info;
 
   // First find in first_time_
@@ -177,7 +177,7 @@ void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
 }
 
 void LRUKReplacer::Remove(frame_id_t frame_id) {
-  std::scoped_lock<std::mutex> lock(latch_);
+  std::lock_guard<std::mutex> lck(latch_);
 
   LruKInfo *info;
 
@@ -221,7 +221,7 @@ void LRUKReplacer::Remove(frame_id_t frame_id) {
 }
 
 auto LRUKReplacer::Size() -> size_t {
-  std::scoped_lock<std::mutex> lock(latch_);
+  std::lock_guard<std::mutex> lck(latch_);
   return curr_size_;
 }
 
