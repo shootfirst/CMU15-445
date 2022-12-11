@@ -151,15 +151,15 @@ class LRUKReplacer {
     LruKInfo(int frame_id, bool evictable) : frame_id_(frame_id), evictable_(evictable) {}
   };
 
-  // when a page is first visited, it will be add in first_time_, when a page is visited k_ times, it will be moved to
-  // k_time_. With list_map_, we find victim with o1 time complexy
-  std::list<LruKInfo *> first_time_;
+  // when a page is first visited, it will be add in list_, when a page is visited k_ times, it will be moved to
+  // tree_. With list_map_, we find victim with o1 time complexy
+  std::list<LruKInfo *> list_;
   // we use list_map_ to make time complexy of search method o1
   std::unordered_map<frame_id_t, std::list<LruKInfo *>::iterator> list_map_;
 
-  // when a page is visited k_ time, it will be stored in the k_time_. With list_map_, we find victim with ologn time
+  // when a page is visited k_ time, it will be stored in the tree_. With list_map_, we find victim with ologn time
   // complexy. key: last k timestap
-  std::map<size_t, LruKInfo *> k_time_;
+  std::map<size_t, LruKInfo *> tree_;
   // we use tree_map_ to make time complexy of search method o1
   std::unordered_map<frame_id_t, std::map<size_t, LruKInfo *>::iterator> tree_map_;
 };

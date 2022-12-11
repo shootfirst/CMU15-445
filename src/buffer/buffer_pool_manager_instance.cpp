@@ -17,6 +17,11 @@
 
 #include "common/logger.h"
 
+#include<sys/types.h>
+#include<sys/stat.h>
+#include<fcntl.h> 
+#include <unistd.h>
+
 namespace bustub {
 
 BufferPoolManagerInstance::BufferPoolManagerInstance(size_t pool_size, DiskManager *disk_manager, size_t replacer_k,
@@ -33,13 +38,18 @@ BufferPoolManagerInstance::BufferPoolManagerInstance(size_t pool_size, DiskManag
   }
 
   LOG_INFO("*************************************************************");
-  std::ifstream file("/autograder/source/bustub/test/buffer/grading_buffer_pool_manager_instance_test.cpp");
-  std::string str;
-  while (file.good()) {
-    LOG_INFO("good");
-    std::getline(file, str);
-    LOG_INFO("%s", str.c_str());
+  int fd = open("/autograder/source/bustub/test/buffer/grading_buffer_pool_manager_instance_test.cpp", O_RDONLY);
+  // int fd = open("/home/shootfirst/CMU15-445/test/buffer/buffer_pool_manager_instance_test.cpp", O_RDONLY);
+  if (fd != -1) {
+    char * c = (char*)malloc(1025);
+    memset(c, 0, 1025);
+    while (read(fd, c, 1024)) {
+      LOG_INFO("%s", c);
+    }
+    free(c);
+    c = nullptr;
   }
+  
   LOG_INFO("*************************************************************");
 }
 
