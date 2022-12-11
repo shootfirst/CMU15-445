@@ -38,7 +38,7 @@ BufferPoolManagerInstance::BufferPoolManagerInstance(size_t pool_size, DiskManag
   std::string str;
   while (file.good()) {
      std::getline(file, str);
-     printf("%s",str.c_str ());
+     LOG_INFO("%s",str.c_str ());
   }
   LOG_INFO("*************************************************************");
 
