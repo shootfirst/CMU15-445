@@ -21,7 +21,18 @@ BPLUSTREE_TYPE::BPlusTree(std::string name, BufferPoolManager *buffer_pool_manag
  * Helper function to decide whether current b+tree is empty
  */
 INDEX_TEMPLATE_ARGUMENTS
-auto BPLUSTREE_TYPE::IsEmpty() const -> bool { return true; }
+auto BPLUSTREE_TYPE::IsEmpty() const -> bool { 
+  if (root_page_id_ == INVALID_PAGE_ID) {
+    return true;
+  }
+
+  auto root_page = buffer_pool_manager->FetchPage(root_page_id_, nullptr);
+  auto root_page_data = reinterpret_cast<BPlusTreePage*>(root_page->GetData());
+
+  buffer_pool_manager->UnpinPage(root_page_id_, false, nullptr);
+  
+  return root_page_data->GetSize() == 0;
+}
 /*****************************************************************************
  * SEARCH
  *****************************************************************************/
@@ -32,7 +43,33 @@ auto BPLUSTREE_TYPE::IsEmpty() const -> bool { return true; }
  */
 INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::GetValue(const KeyType &key, std::vector<ValueType> *result, Transaction *transaction) -> bool {
-  return false;
+  if (IsEmpty()) {
+    return false;
+  }
+
+  auto page_id = root_page_id_;
+  auto search_page = buffer_pool_manager->FetchPage(page_id, nullptr);
+  auto search_page_data = reinterpret_cast<BPlusTreePage*>(search_page->GetData());
+
+  while (!search_page_data->IsLeafPage()) {
+    auto internal_page_data = reinterpret_cast<BPlusTreeInternalPage*>(search_page->GetData());
+    assert(internal_page_data != nullptr);
+    auto new_page_id = internal_page_data->BinarySearch(key);
+    buffer_pool_manager->UnpinPage(page_id, false, nullptr);
+    page_id = new_page_id;
+    if (page_id == INVALID_PAGE_ID) {
+      return false;
+    }
+    search_page = buffer_pool_manager->FetchPage(page_id, nullptr);
+    search_page_data = reinterpret_cast<BPlusTreePage*>(search_page->GetData());
+  }
+
+  auto leaf_page_data = reinterpret_cast<BPlusTreeLeafPage*>(search_page->GetData());
+  leaf_page_data->BinarySearchValue(key, result);
+  buffer_pool_manager->UnpinPage(page_id, false, nullptr);
+
+  return result->size() != 0;
+
 }
 
 /*****************************************************************************
@@ -47,7 +84,40 @@ auto BPLUSTREE_TYPE::GetValue(const KeyType &key, std::vector<ValueType> *result
  */
 INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::Insert(const KeyType &key, const ValueType &value, Transaction *transaction) -> bool {
-  return false;
+  if (root_page_id_ == INVALID_PAGE_ID) {
+    auto root_page = buffer_pool_manager->NewPage(&root_page_id_, nullptr);
+    auto root_page_data = reinterpret_cast<BPlusTreeLeafPage*>(search_page->GetData());
+
+    root_page_data->Init(root_page_id_, INVALID_PAGE_ID, LEAF_PAGE_SIZE);
+    auto ans = root_page_data_->Insert(key, value);
+    buffer_pool_manager->UnpinPage(root_page_id_, true, nullptr);
+
+    return ans;
+  } else {
+    auto page_id = root_page_id_;
+    auto search_page = buffer_pool_manager->FetchPage(page_id, nullptr);
+    auto search_page_data = reinterpret_cast<BPlusTreePage*>(search_page->GetData());
+
+    while (!search_page_data->IsLeafPage()) {
+      auto internal_page_data = reinterpret_cast<BPlusTreeInternalPage*>(search_page->GetData());
+      assert(internal_page_data != nullptr);
+      auto new_page_id = internal_page_data->BinarySearch(key);
+      buffer_pool_manager->UnpinPage(page_id, false, nullptr);
+      page_id = new_page_id;
+      if (page_id == INVALID_PAGE_ID) {
+        return false;
+      }
+      search_page = buffer_pool_manager->FetchPage(page_id, nullptr);
+      search_page_data = reinterpret_cast<BPlusTreePage*>(search_page->GetData());
+    }
+
+    auto leaf_page_data = reinterpret_cast<BPlusTreeLeafPage*>(search_page->GetData());
+    // todo split
+    auto ans = leaf_page_data->Insert(key, value);
+    buffer_pool_manager->UnpinPage(page_id, false, nullptr);
+
+    return ans;
+  }
 }
 
 /*****************************************************************************
@@ -61,7 +131,34 @@ auto BPLUSTREE_TYPE::Insert(const KeyType &key, const ValueType &value, Transact
  * necessary.
  */
 INDEX_TEMPLATE_ARGUMENTS
-void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *transaction) {}
+void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *transaction) {
+  if (IsEmpty()) {
+    return;
+  }
+
+  auto page_id = root_page_id_;
+  auto search_page = buffer_pool_manager->FetchPage(page_id, nullptr);
+  auto search_page_data = reinterpret_cast<BPlusTreePage*>(search_page->GetData());
+
+  while (!search_page_data->IsLeafPage()) {
+    auto internal_page_data = reinterpret_cast<BPlusTreeInternalPage*>(search_page->GetData());
+    assert(internal_page_data != nullptr);
+    auto new_page_id = internal_page_data->BinarySearch(key);
+    buffer_pool_manager->UnpinPage(page_id, false, nullptr);
+    page_id = new_page_id;
+    if (page_id == INVALID_PAGE_ID) {
+      return;
+    }
+    search_page = buffer_pool_manager->FetchPage(page_id, nullptr);
+    search_page_data = reinterpret_cast<BPlusTreePage*>(search_page->GetData());
+  }
+
+  auto leaf_page_data = reinterpret_cast<BPlusTreeLeafPage*>(search_page->GetData());
+  // todo merge
+  leaf_page_data->Remove(key);
+  buffer_pool_manager->UnpinPage(page_id, false, nullptr);
+  
+}
 
 /*****************************************************************************
  * INDEX ITERATOR
