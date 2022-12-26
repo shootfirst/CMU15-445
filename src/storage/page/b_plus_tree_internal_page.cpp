@@ -64,7 +64,7 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::SetValueAt(int index, const ValueType &valu
  * find the right page_id assosiated to key
  */
 INDEX_TEMPLATE_ARGUMENTS
-auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::BinarySearch(KeyType &key, KeyComparator comparator) -> ValueType {
+auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::BinarySearch(const KeyType &key, KeyComparator comparator) -> ValueType {
   // if key is smaller than the smallest key in the page, return the first pageid
   if (comparator(key, KeyAt(1)) < 0) {
     return ValueAt(0);
@@ -84,7 +84,7 @@ auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::BinarySearch(KeyType &key, KeyComparator co
 }
 
 INDEX_TEMPLATE_ARGUMENTS
-auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::Insert(KeyType &key, ValueType &value, ValueType &left_value, KeyComparator comparator) -> bool {
+auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::Insert(const KeyType &key, const ValueType &value, const ValueType &left_value, KeyComparator comparator) -> bool {
   if (comparator(key, KeyAt(1)) < 0) {
     MoveBackN(1);
     // insert 
@@ -98,7 +98,7 @@ auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::Insert(KeyType &key, ValueType &value, Valu
   // find last <= key
   int left = 1, right = GetSize() - 1;
   while (left < right) {
-    int mid = (left + right) / 2;
+    int mid = (left + right + 1) / 2;
     if (comparator(key, KeyAt(mid)) < 0) {
       right = mid - 1;
     } else {

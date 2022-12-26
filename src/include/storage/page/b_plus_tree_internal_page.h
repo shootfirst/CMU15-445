@@ -43,8 +43,8 @@ class BPlusTreeInternalPage : public BPlusTreePage {
   auto ValueAt(int index) const -> ValueType;
   void SetValueAt(int index, const ValueType &value);
 
-  auto BinarySearch(KeyType &key, KeyComparator comparator) -> ValueType;
-  auto Insert(KeyType &key, ValueType &value, ValueType &left_value, KeyComparator comparator) -> bool;
+  auto BinarySearch(const KeyType &key, KeyComparator comparator) -> ValueType;
+  auto Insert(const KeyType &key, const ValueType &value, const ValueType &left_value, KeyComparator comparator) -> bool;
   void MoveBackN(int n);
   void MoveFromOther(BPlusTreeInternalPage *other, BufferPoolManager *buffer_pool_manager_);
 

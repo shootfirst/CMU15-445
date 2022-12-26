@@ -284,7 +284,7 @@ void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
     no_evictable_map_.erase(no_evictable_map_.find(frame_id));
     evictable_map_[frame_id] = info;
   }
-  LOG_DEBUG("frame %d set %d", frame_id, set_evictable);
+  // LOG_DEBUG("frame %d set %d", frame_id, set_evictable);
 }
 
 void LRUKReplacer::Remove(frame_id_t frame_id) {
