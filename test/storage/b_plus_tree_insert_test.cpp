@@ -20,6 +20,56 @@
 
 namespace bustub {
 
+// dzh add 
+TEST(BPlusTreeTests, DISABLED_InsertTest0) {
+  // create KeyComparator and index schema
+  auto key_schema = ParseCreateStatement("a bigint");
+  GenericComparator<8> comparator(key_schema.get());
+
+  auto *disk_manager = new DiskManager("test.db");
+  BufferPoolManager *bpm = new BufferPoolManagerInstance(50, disk_manager);
+  // create b+ tree
+  // BPlusTree<GenericKey<8>, RID, GenericComparator<8>> tree("foo_pk", bpm, comparator, 7, 6);
+  // GenericKey<8> index_key;
+  // RID rid;
+  BPlusTree<int, int, GenericComparator<8>> tree("foo_pk", bpm, comparator, 7, 6);
+  // create transaction
+  auto *transaction = new Transaction(0);
+
+  // create and fetch header_page
+  page_id_t page_id;
+  auto header_page = bpm->NewPage(&page_id);
+  ASSERT_EQ(page_id, HEADER_PAGE_ID);
+  (void)header_page;
+
+  // int64_t key = 42;
+  // int64_t value = key & 0xFFFFFFFF;
+  // rid.Set(static_cast<int32_t>(key), value);
+  // index_key.SetFromInteger(key);
+  // tree.Insert(index_key, rid, transaction);
+
+  auto root_page_id = tree.GetRootPageId();
+  // auto root_page = reinterpret_cast<BPlusTreePage *>(bpm->FetchPage(root_page_id)->GetData());
+  // ASSERT_NE(root_page, nullptr);
+  // ASSERT_TRUE(root_page->IsLeafPage());
+
+  // auto root_as_leaf = reinterpret_cast<BPlusTreeLeafPage<GenericKey<8>, RID, GenericComparator<8>> *>(root_page);
+  // ASSERT_EQ(root_as_leaf->GetSize(), 1);
+  // ASSERT_EQ(comparator(root_as_leaf->KeyAt(0), index_key), 0);
+
+  for (int i = 1; i <= 21; i++) {
+    tree.Insert(i, i, transaction);
+  }
+
+  bpm->UnpinPage(root_page_id, false);
+  bpm->UnpinPage(HEADER_PAGE_ID, true);
+  delete transaction;
+  delete disk_manager;
+  delete bpm;
+  remove("test.db");
+  remove("test.log");
+}
+
 TEST(BPlusTreeTests, DISABLED_InsertTest1) {
   // create KeyComparator and index schema
   auto key_schema = ParseCreateStatement("a bigint");

@@ -41,9 +41,16 @@ class BPlusTreeInternalPage : public BPlusTreePage {
   auto KeyAt(int index) const -> KeyType;
   void SetKeyAt(int index, const KeyType &key);
   auto ValueAt(int index) const -> ValueType;
+  void SetValueAt(int index, const ValueType &value);
+
+  auto BinarySearch(KeyType &key, KeyComparator comparator) -> ValueType;
+  auto Insert(KeyType &key, ValueType &value, ValueType &left_value, KeyComparator comparator) -> bool;
+  void MoveBackN(int n);
+  void MoveFromOther(BPlusTreeInternalPage *other, BufferPoolManager *buffer_pool_manager_);
 
  private:
-  // Flexible array member for page data.
+  // Flexible array member for page data. 
+  // the first key is invalid
   MappingType array_[1];
 };
 }  // namespace bustub
