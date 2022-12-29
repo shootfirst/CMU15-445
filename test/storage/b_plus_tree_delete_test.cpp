@@ -20,7 +20,52 @@
 
 namespace bustub {
 
-TEST(BPlusTreeTests, DISABLED_DeleteTest1) {
+// // dzh add 
+// TEST(BPlusTreeTests, DeleteTest0) {
+//   auto key_schema = ParseCreateStatement("a bigint");
+//   GenericComparator<8> comparator(key_schema.get());
+
+//   auto *disk_manager = new DiskManager("test.db");
+//   BufferPoolManager *bpm = new BufferPoolManagerInstance(50, disk_manager);
+//   // create b+ tree
+//   BPlusTree<GenericKey<8>, RID, GenericComparator<8>> tree("foo_pk", bpm, comparator, 6, 7);
+//   GenericKey<8> index_key;
+//   RID rid;
+//   // create transaction
+//   auto *transaction = new Transaction(0);
+
+//   // create and fetch header_page
+//   page_id_t page_id;
+//   auto header_page = bpm->NewPage(&page_id);
+//   ASSERT_EQ(page_id, HEADER_PAGE_ID);
+//   (void)header_page;
+
+//   for (int i = 1; i <= 21; i++) {
+//     int64_t key = i;
+//     int64_t value = key & 0xFFFFFFFF;
+//     rid.Set(static_cast<int32_t>(key), value);
+//     index_key.SetFromInteger(key);
+//     bool res = tree.Insert(index_key, rid, transaction);
+//     ASSERT_TRUE(res);
+//   }
+
+//   index_key.SetFromInteger(1);
+//   tree.Remove(index_key, transaction);
+
+  
+
+//   auto root_page_id = tree.GetRootPageId();
+
+//   bpm->UnpinPage(root_page_id, true);
+//   bpm->UnpinPage(HEADER_PAGE_ID, true);
+//   delete transaction;
+//   delete disk_manager;
+//   delete bpm;
+//   remove("test.db");
+//   remove("test.log");
+// }
+
+TEST(BPlusTreeTests, DeleteTest1) {
   // create KeyComparator and index schema
   auto key_schema = ParseCreateStatement("a bigint");
   GenericComparator<8> comparator(key_schema.get());
@@ -92,7 +137,7 @@ TEST(BPlusTreeTests, DISABLED_DeleteTest1) {
   remove("test.log");
 }
 
-TEST(BPlusTreeTests, DISABLED_DeleteTest2) {
+TEST(BPlusTreeTests, DeleteTest2) {
   // create KeyComparator and index schema
   auto key_schema = ParseCreateStatement("a bigint");
   GenericComparator<8> comparator(key_schema.get());

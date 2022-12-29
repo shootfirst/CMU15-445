@@ -48,6 +48,15 @@ class BPlusTreeInternalPage : public BPlusTreePage {
   void MoveBackN(int n);
   void MoveFromOther(BPlusTreeInternalPage *other, BufferPoolManager *buffer_pool_manager_);
 
+  auto Locate(const KeyType &key, KeyComparator comparator) -> int;
+  void Remove(const KeyType &key, KeyComparator comparator);
+  auto ValueIndex(const ValueType &value) -> int;
+  auto GetLeftPage(const ValueType &value) -> ValueType;
+  auto GetRightPage(const ValueType &value) -> ValueType;
+  void MoveToBack(BPlusTreeInternalPage *parent, int index, BPlusTreeInternalPage *other, BufferPoolManager *buffer_pool_manager);
+  void AppendFirst(const ValueType &value, const KeyType &key);
+  void PopFirst();
+
  private:
   // Flexible array member for page data. 
   // the first key is invalid

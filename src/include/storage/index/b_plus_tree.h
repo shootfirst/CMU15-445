@@ -62,6 +62,16 @@ class BPlusTree {
   // Remove a key and its value from this B+ tree.
   void Remove(const KeyType &key, Transaction *transaction = nullptr);
 
+  // template <typename N>
+  void CoalesceOrRedistribute(BPlusTreePage *node, const KeyType &key, Transaction *transaction);
+
+  // template <typename N>
+  void Coalesce(BPlusTreePage **neighbor_node, BPlusTreePage **node, BPlusTreeInternalPage<KeyType, page_id_t, KeyComparator> **parent, int index,
+                              Transaction *transaction);
+
+  // template <typename N>
+  void Redistribute(BPlusTreePage *neighbor_node, BPlusTreePage *node, int index);
+
   // return the value associated with a given key
   auto GetValue(const KeyType &key, std::vector<ValueType> *result, Transaction *transaction = nullptr) -> bool;
 

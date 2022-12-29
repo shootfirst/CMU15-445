@@ -153,6 +153,61 @@ void B_PLUS_TREE_LEAF_PAGE_TYPE::MoveFromOther(BPlusTreeLeafPage *other) {
   other->IncreaseSize(min_size - max_size);
 }
 
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_LEAF_PAGE_TYPE::Remove(const KeyType &key, KeyComparator comparator) {
+  // find equal
+  int left = 0, right = GetSize() - 1;
+  while (left <= right) {
+    int mid = (left + right) / 2;
+    if (comparator(key, KeyAt(mid)) < 0) {
+      right = mid - 1;
+    } else if (comparator(key, KeyAt(mid)) > 0) {
+      left = mid + 1;
+    } else {
+      // remove mid
+      for (int i = mid; i < GetSize() - 1; i++) {
+        SetKeyAt(i, KeyAt(i + 1));
+        SetValueAt(i, ValueAt(i + 1));
+      }
+      // decrease size
+      IncreaseSize(-1);
+      return;
+    }
+  }
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_LEAF_PAGE_TYPE::MoveToBack(BPlusTreeLeafPage *other) {
+  // move
+  int size = other->GetSize();
+  int self_size = GetSize();
+  for (int i = 0; i < size; i++) {
+    // move
+    SetKeyAt(self_size + i, other->KeyAt(i));
+    SetValueAt(self_size + i, other->ValueAt(i));
+    // increase size
+    IncreaseSize(1);
+  }
+  // decrease other size
+  other->IncreaseSize(- other->GetSize());
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_LEAF_PAGE_TYPE::AppendFirst(const KeyType &key, const ValueType &value) {
+  int size = GetSize();
+  // move
+  for(int i = size - 1; i >= 0; i--) {
+    SetKeyAt(i + 1, KeyAt(i));
+    SetValueAt(i + 1, ValueAt(i));
+  }
+  // append first
+  SetKeyAt(0, key);
+  SetValueAt(0, value);
+  // increase size
+  IncreaseSize(1);
+}
+
 template class BPlusTreeLeafPage<GenericKey<4>, RID, GenericComparator<4>>;
 template class BPlusTreeLeafPage<GenericKey<8>, RID, GenericComparator<8>>;
 template class BPlusTreeLeafPage<GenericKey<16>, RID, GenericComparator<16>>;

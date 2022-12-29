@@ -130,7 +130,7 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveBackN(int n) {
 }
 
 INDEX_TEMPLATE_ARGUMENTS
-void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveFromOther(BPlusTreeInternalPage *other, BufferPoolManager *buffer_pool_manager_) {
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveFromOther(BPlusTreeInternalPage *other, BufferPoolManager *buffer_pool_manager) {
   // move
   int min_size = GetMinSize();
   int max_size = GetMaxSize();
@@ -141,7 +141,7 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveFromOther(BPlusTreeInternalPage *other,
 
     page_id_t child_page_id = other->ValueAt(i);
     // pin here
-    auto child_page = buffer_pool_manager_->FetchPage(child_page_id, nullptr);
+    auto child_page = buffer_pool_manager->FetchPage(child_page_id, nullptr);
     if (child_page == nullptr) {
       throw std::runtime_error("valid page id do not exist");
     }
@@ -149,13 +149,138 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveFromOther(BPlusTreeInternalPage *other,
     // update children 's parent
     child_page_data->SetParentPageId(GetPageId());
     // unpin here
-    buffer_pool_manager_->UnpinPage(child_page_id, true, nullptr);
+    buffer_pool_manager->UnpinPage(child_page_id, true, nullptr);
   }
   // increase size
   IncreaseSize(max_size - min_size);
   // decrease other size
   other->IncreaseSize(min_size - max_size);
 }
+
+INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::Locate(const KeyType &key, KeyComparator comparator) -> int {
+  // find equal
+  int left = 1, right = GetSize() - 1;
+  while (left <= right) {
+    int mid = (left + right) / 2;
+    if (comparator(key, KeyAt(mid)) < 0) {
+      right = mid - 1;
+    } else if (comparator(key, KeyAt(mid)) > 0) {
+      left = mid + 1;
+    } else {
+      return mid;
+    }
+  }
+  return -1;
+}
+
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::Remove(const KeyType &key, KeyComparator comparator) {
+  // find equal
+  int location = Locate(key, comparator);
+  if (location != -1) {
+    // remove
+    for (int i = location; i < GetSize() - 1; i++) {
+      SetKeyAt(i, KeyAt(i + 1));
+      SetValueAt(i, ValueAt(i + 1));
+    }
+    // decrease size
+    IncreaseSize(-1);
+  }
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::ValueIndex(const ValueType &value) -> int {
+  for (int i = 0; i < GetSize(); i++) {
+    if (array_[i].second == value) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::GetLeftPage(const ValueType &value) -> ValueType {
+  int index = ValueIndex(value);
+  if (index == 0) {
+    return -1;
+  } else {
+    return array_[index - 1].second;
+  }
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::GetRightPage(const ValueType &value) -> ValueType {
+  int index = ValueIndex(value);
+  if (index == GetSize() - 1) {
+    return -1;
+  } else {
+    return array_[index + 1].second;
+  }
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveToBack(BPlusTreeInternalPage *parent, 
+    int index, BPlusTreeInternalPage *other, BufferPoolManager *buffer_pool_manager) {
+  int size = other->GetSize();
+  int self_size = GetSize();
+  for (int i = 0; i < size; i++) {
+    // move
+    if (i == 0) {
+      // the first key is the value between 2 pointers in parent
+      SetKeyAt(self_size + i, parent->KeyAt(index));
+    } else {
+      SetKeyAt(self_size + i, other->KeyAt(i));
+    }
+    SetValueAt(self_size + i, other->ValueAt(i));
+    // increase size
+    IncreaseSize(1);
+
+    page_id_t child_page_id = other->ValueAt(i);
+    // pin here
+    auto child_page = buffer_pool_manager->FetchPage(child_page_id, nullptr);
+    if (child_page == nullptr) {
+      throw std::runtime_error("valid page id do not exist");
+    }
+    auto child_page_data = reinterpret_cast<BPlusTreePage*>(child_page->GetData());
+    // update children 's parent
+    child_page_data->SetParentPageId(GetPageId());
+    // unpin here
+    buffer_pool_manager->UnpinPage(child_page_id, true, nullptr);
+
+  }
+  // decrease other size
+  other->IncreaseSize(- other->GetSize());
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::AppendFirst(const ValueType &value, const KeyType &key) {
+  int size = GetSize();
+  // move
+  for(int i = size - 1; i >= 0; i++) {
+    SetKeyAt(i + 1, KeyAt(i));
+    SetValueAt(i + 1, ValueAt(i));
+  }
+  // append first
+  SetValueAt(0, value);
+  SetKeyAt(1, key);
+  // increase size
+  IncreaseSize(1);
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::PopFirst() {
+  int size = GetSize();
+  // move
+  for(int i = 1; i < size; i++) {
+    SetKeyAt(i - 1, KeyAt(i));
+    SetValueAt(i - 1, ValueAt(i));
+  }
+  // decrease size
+  IncreaseSize(-1);
+}
+
 
 // valuetype for internalNode should be page id_t
 template class BPlusTreeInternalPage<GenericKey<4>, page_id_t, GenericComparator<4>>;
