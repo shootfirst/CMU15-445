@@ -581,26 +581,6 @@ void BPLUSTREE_TYPE::Redistribute(BPlusTreePage *neighbor_node, BPlusTreePage *n
 }
 
 
-/*
- * Update root page if necessary
- * NOTE: size of root page can be less than min size and this method is only
- * called within coalesceOrRedistribute() method
- * case 1: when you delete the last element in root page, but root page still
- * has one last child
- * case 2: when you delete the last element in whole b+ tree
- * @return : true means root page should be deleted, false means no deletion
- * happend
- */
-// INDEX_TEMPLATE_ARGUMENTS
-// auto BPLUSTREE_TYPE::AdjustRoot(BPlusTreePage *old_root_node) -> bool { return false; }
-
-
-
-
-
-
-
-
 
 
 /*****************************************************************************
@@ -612,7 +592,38 @@ void BPLUSTREE_TYPE::Redistribute(BPlusTreePage *neighbor_node, BPlusTreePage *n
  * @return : index iterator
  */
 INDEX_TEMPLATE_ARGUMENTS
-auto BPLUSTREE_TYPE::Begin() -> INDEXITERATOR_TYPE { return INDEXITERATOR_TYPE(); }
+auto BPLUSTREE_TYPE::Begin() -> INDEXITERATOR_TYPE {
+//========================================== get leftest leaf page ============================================
+  auto search_page_id = root_page_id_;
+  // pin here
+  auto search_page = buffer_pool_manager_->FetchPage(search_page_id, nullptr);
+  if (search_page == nullptr) {
+    throw std::runtime_error("valid page id do not exist");
+  }
+  auto search_page_data = reinterpret_cast<BPlusTreePage*>(search_page->GetData());
+  while (!search_page_data->IsLeafPage()) {
+    auto internal_page_data = reinterpret_cast<InternalPage*>(search_page_data);
+    assert(internal_page_data != nullptr);
+
+    // get the leftest page id
+    auto new_page_id = internal_page_data->ValueAt(0);
+
+    // unpin here
+    buffer_pool_manager_->UnpinPage(search_page_id, false, nullptr);
+    // update search_page_id
+    search_page_id = new_page_id;
+    // pin here
+    search_page = buffer_pool_manager_->FetchPage(search_page_id, nullptr);
+    if (search_page == nullptr) {
+      throw std::runtime_error("valid page id do not exist");
+    }
+    search_page_data = reinterpret_cast<BPlusTreePage*>(search_page->GetData());
+  }
+//=============================================================================================================
+
+  // the leaf page is pinned
+  return INDEXITERATOR_TYPE(buffer_pool_manager_, reinterpret_cast<LeafPage*>(search_page_data), 0); 
+}
 
 /*
  * Input parameter is low key, find the leaf page that contains the input key
@@ -620,7 +631,12 @@ auto BPLUSTREE_TYPE::Begin() -> INDEXITERATOR_TYPE { return INDEXITERATOR_TYPE()
  * @return : index iterator
  */
 INDEX_TEMPLATE_ARGUMENTS
-auto BPLUSTREE_TYPE::Begin(const KeyType &key) -> INDEXITERATOR_TYPE { return INDEXITERATOR_TYPE(); }
+auto BPLUSTREE_TYPE::Begin(const KeyType &key) -> INDEXITERATOR_TYPE { 
+  // the leaf page is pinned
+  auto leaf_page = FindLeafPage(key, nullptr);
+  auto leaf_page_data = reinterpret_cast<LeafPage*>(leaf_page->GetData());
+  return INDEXITERATOR_TYPE(buffer_pool_manager_, leaf_page_data, leaf_page_data->BinarySearchKey(key, comparator_));  
+}
 
 /*
  * Input parameter is void, construct an index iterator representing the end
@@ -628,7 +644,48 @@ auto BPLUSTREE_TYPE::Begin(const KeyType &key) -> INDEXITERATOR_TYPE { return IN
  * @return : index iterator
  */
 INDEX_TEMPLATE_ARGUMENTS
-auto BPLUSTREE_TYPE::End() -> INDEXITERATOR_TYPE { return INDEXITERATOR_TYPE(); }
+auto BPLUSTREE_TYPE::End() -> INDEXITERATOR_TYPE { 
+//========================================== get rightest leaf page ============================================
+  auto search_page_id = root_page_id_;
+  // pin here
+  auto search_page = buffer_pool_manager_->FetchPage(search_page_id, nullptr);
+  if (search_page == nullptr) {
+    throw std::runtime_error("valid page id do not exist");
+  }
+  auto search_page_data = reinterpret_cast<BPlusTreePage*>(search_page->GetData());
+  while (!search_page_data->IsLeafPage()) {
+    auto internal_page_data = reinterpret_cast<InternalPage*>(search_page_data);
+    assert(internal_page_data != nullptr);
+    // get the leftest page id
+    auto new_page_id = internal_page_data->ValueAt(internal_page_data->GetSize() - 1);
+    // unpin here
+    buffer_pool_manager_->UnpinPage(search_page_id, false, nullptr);
+    // update search_page_id
+    search_page_id = new_page_id;
+    // pin here
+    search_page = buffer_pool_manager_->FetchPage(search_page_id, nullptr);
+    if (search_page == nullptr) {
+      throw std::runtime_error("valid page id do not exist");
+    }
+    search_page_data = reinterpret_cast<BPlusTreePage*>(search_page->GetData());
+  }
+//=============================================================================================================
+
+  // the leaf page is pinned
+  auto leaf_page_data = reinterpret_cast<LeafPage*>(search_page->GetData());
+  return INDEXITERATOR_TYPE(buffer_pool_manager_, leaf_page_data, leaf_page_data->GetSize()); 
+}
+
+
+
+
+
+
+
+
+
+
+
 
 /**
  * @return Page id of the root of this tree

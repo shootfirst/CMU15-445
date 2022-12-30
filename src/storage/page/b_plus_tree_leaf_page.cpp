@@ -70,6 +70,11 @@ void B_PLUS_TREE_LEAF_PAGE_TYPE::SetValueAt(int index, const ValueType &value) {
 }
 
 INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_LEAF_PAGE_TYPE::PairAt(int index)-> const MappingType & {
+  return array_[index];
+}
+
+INDEX_TEMPLATE_ARGUMENTS
 auto B_PLUS_TREE_LEAF_PAGE_TYPE::BinarySearch(const KeyType &key, ValueType *value, KeyComparator comparator) -> bool {
   // find equal
   int left = 0, right = GetSize() - 1;
@@ -206,6 +211,24 @@ void B_PLUS_TREE_LEAF_PAGE_TYPE::AppendFirst(const KeyType &key, const ValueType
   SetValueAt(0, value);
   // increase size
   IncreaseSize(1);
+}
+
+
+INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_LEAF_PAGE_TYPE::BinarySearchKey(const KeyType &key, KeyComparator comparator) -> int {
+  // find equal
+  int left = 0, right = GetSize() - 1;
+  while (left <= right) {
+    int mid = (left + right) / 2;
+    if (comparator(key, KeyAt(mid)) < 0) {
+      right = mid - 1;
+    } else if (comparator(key, KeyAt(mid)) > 0) {
+      left = mid + 1;
+    } else {
+      return mid;
+    }
+  }
+  return -1;
 }
 
 template class BPlusTreeLeafPage<GenericKey<4>, RID, GenericComparator<4>>;

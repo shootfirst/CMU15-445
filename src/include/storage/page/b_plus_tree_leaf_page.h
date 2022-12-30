@@ -53,6 +53,8 @@ class BPlusTreeLeafPage : public BPlusTreePage {
   auto ValueAt(int index) const -> ValueType;
   void SetValueAt(int index, const ValueType &value);
 
+  auto PairAt(int index)-> const MappingType &;
+
   auto BinarySearch(const KeyType &key, ValueType *value, KeyComparator comparator) -> bool;
   auto Insert(const KeyType &key, const ValueType &value, KeyComparator comparator) -> bool;
   void MoveBackN(int n);
@@ -61,6 +63,8 @@ class BPlusTreeLeafPage : public BPlusTreePage {
   void Remove(const KeyType &key, KeyComparator comparator);
   void MoveToBack(BPlusTreeLeafPage *other);
   void AppendFirst(const KeyType &key, const ValueType &value);
+
+  auto BinarySearchKey(const KeyType &key, KeyComparator comparator) -> int;
   
 
  private:
