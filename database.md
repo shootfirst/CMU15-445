@@ -1,22 +1,11 @@
-# database 
+# 数据库
 
-## storage
 
-diskmanager 负责数据库的数据在易失性存储和非易失性存储的移动
+## STORAGE
 
-#### disk manager替换os来管理的意义
+#### Disk Manager
 
-#### 如何使用磁盘文件来表示数据库的数据
-
-#### OLTP和OLAP
-
-#### data storage model
-
-+ NSM
-
-+ DSM
-
-#### bufferpool
+#### Bufferpool
 
 + pagetable 哈希表
 
@@ -26,27 +15,94 @@ diskmanager 负责数据库的数据在易失性存储和非易失性存储的�
 
 + flush链表
 
-#### 替换算法
+#### 使用磁盘文件来表示数据库的数据
 
-+ LRU
+#### Data Storage Model
 
-+ clock
++ NSM
 
-+ LRU-K
++ DSM
 
-## transaction
+
+## INDEX索引
+
+#### B+树
+
+##### 数据结构
+
+##### 并发控制
+
+#### 动态哈希表
+
+##### 数据结构
+
+##### 并发控制
+
+
+
+## SQL
+
+#### SQL解析
+
+#### SQL预处理
+
+#### SQL优化
+
+#### SQL执行
+
+##### Processing Model
+
++ Iterator Model
+
++ Materialization Model
+
++ Vectorization Model
+
+##### Join Algorithms
+
++ Nested Loop Join
+
++ Sort Merge Join
+
++ Hash Join
+
+
+
+## TRANSACTION事务
 
 #### ACID
 
 原子性、一致性、隔离性、持久性
 
-#### Serial
+#### 四大隔离级别
 
-+ Serial Schedule
++ 读未提交
 
-+ Serializable Schedule
++ 读已提交
 
-#### 2PL
++ 可重复读
+
++ 串行化
+
+#### MVCC
+
+#### RECOVERY
+
+##### REDU
+
+##### UNDO
+
+#### 锁
+
+##### 间隙锁
+
+##### 表锁
+
+##### 行锁
+
+#### 并发控制实现
+
+##### 2PL
 
 + lock manager
 
@@ -61,9 +117,3 @@ diskmanager 负责数据库的数据在易失性存储和非易失性存储的�
 + 死锁预防 wait-die wound-wait
 
 + hierarchical locking 防止锁过多
-
-#### timestamp ordering 
-
-
-
-
