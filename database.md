@@ -131,7 +131,22 @@
 
 
 
+
 ## 日志
+
+
+#### 概述
+
+##### Write-Ahead Log策略
+
+##### io写入原子性
+
+##### 日志类型
+
++ 物理日志
+
++ 逻辑日志
+
 
 #### redo log
 
@@ -139,24 +154,21 @@
 
 ##### redo log格式
 
-+ 在某个偏移量修改len长度字节
++ 物理日志：在某个偏移量修改len长度字节
 
-+ 插入、删除记录，创建页面的redo log
++ 逻辑物理日志：在某页面插入、删除记录，或者创建页面
 
+##### redo log block
 
-##### redo log组
+##### lsn flush_lsn checkpoint_lsn
 
-##### mini trasaction
+##### bufferpool flush链表中的lsn
+
+##### redo log日志文件组
+
+##### mini transaction
 
 ##### redo log buffer
-
-刷盘时机
-
-##### log buffer
-
-##### redo log 日志文件组
-
-##### lsn flush_lsn checkpoint
 
 ##### redo log写入过程
 
