@@ -133,6 +133,8 @@
 
 ##### string
 
+sds
+
 + int
 
 + raw
@@ -140,6 +142,10 @@
 + embstr
 
 ##### list
+
+quicklist
+
+ziplist
 
 ##### hash
 
