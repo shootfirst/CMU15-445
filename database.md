@@ -70,6 +70,14 @@
 
 ## TRANSACTION事务
 
+#### 分类
+
++ 只读事务
+
++ 读写事务
+
+#### 事务id分配时机
+
 #### ACID
 
 原子性、一致性、隔离性、持久性
@@ -83,6 +91,8 @@
 + 可重复读
 
 + 串行化
+
+
 
 #### MVCC
 
@@ -121,37 +131,104 @@
 
 
 
+## 日志
+
+#### redo log
+
+记录数据修改后的状态
+
+##### redo log格式
+
++ 在某个偏移量修改len长度字节
+
++ 插入、删除记录，创建页面的redo log
+
+
+##### redo log组
+
+##### mini trasaction
+
+##### redo log buffer
+
+刷盘时机
+
+##### log buffer
+
+##### redo log 日志文件组
+
+##### lsn flush_lsn checkpoint
+
+##### redo log写入过程
+
+##### 崩溃时如何恢复
+
+
+
+
+#### undo log
+
+记录数据修改前的状态
+
+##### 日志指针存储位置row pointer
+
+##### insert的undo log
+
+##### delete的undo log
+
+中间态
+
+##### update的undo log
+
++ 更新主键
+
++ 不更新主键
+
+##### 增删改二级索引的步骤
+
+##### undo页
+
++ 两种主要类型
+
+##### undo链表
+
++ 重用原则
+
+##### 回滚（rollback）段
+
++ slot
+
++ cache
+
++ history
+
+##### undo日志分配、写入过程
+
++ 分配回滚段
+
++ 寻找是否有对应缓存slot
+
++ 没有则寻找一个可用slot
+
++ 如果非cache，则分配undo seg，将firstpage填入slot
+
++ 开始使用！
+
+##### undo log buffer
+
+刷盘时机
+
+##### 崩溃时如何恢复
 
 
 
 
 
 
-## Redis
 
-### 数据结构
 
-##### string
 
-sds
 
-+ int
 
-+ raw
-
-+ embstr
-
-##### list
-
-quicklist
-
-ziplist
-
-##### hash
-
-##### set
-
-##### zset
 
 
 
