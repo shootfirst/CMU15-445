@@ -117,3 +117,34 @@
 + 死锁预防 wait-die wound-wait
 
 + hierarchical locking 防止锁过多
+
+
+
+
+
+
+
+
+
+
+## Redis
+
+### 数据结构
+
+##### string
+
++ int
+
++ raw
+
++ embstr
+
+##### 
+
+
+
+
+
+
+
+
