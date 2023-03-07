@@ -147,10 +147,15 @@
 
 + 逻辑日志
 
++ 逻辑物理结合
+
+
 
 #### redo log
 
-记录数据修改后的状态
+作用：记录对一个页面（索引页，数据页，undo页）的修改
+
+过程：对一个页面修改完后（还在内存），写入redo页
 
 ##### redo log格式
 
@@ -160,19 +165,45 @@
 
 ##### redo log block
 
-##### lsn flush_lsn checkpoint_lsn
++ 所有的redo 日志写入redo日志文件
 
-##### bufferpool flush链表中的lsn
++ 而redo日志文件被划分为一个个block，512字节
 
-##### redo log日志文件组
-
-##### mini transaction
++ 前四个blog特殊，第一个为log file header，2和4为checkpoint1和2
 
 ##### redo log buffer
 
-##### redo log写入过程
++
 
-##### 崩溃时如何恢复
+##### redo log组和mini transaction
+
++
+
+##### log sequence number（lsn）
+
+lsn值记录写入的redo log字节数，初始值为8704
+
++ flush_lsn
+
++ buffer pool flush链表的lsn
+
+##### checkpoint的执行
+
+redo log可以被覆盖，意味着，该redo log对应的脏页，已经刷盘了
+
++ 通过flush链表最末端计算checkpoint lsn
+
++ 写入到checkpoint block
+
+##### 崩溃恢复
+
++ 通过最近的checkpoint lsn确定恢复起点
+
++ 注意，恢复起点到终点的这些日志，并不是全部可以执行！这段日志的操作结果有的已经后台线程刷盘了！这些日志不能重复执行，不是```幂等```
+
++ 每个页面有一个值，记录最近一次持久化的lsn，如果该值大于checkpoint，则不需执行！
+
+
 
 
 
@@ -229,7 +260,7 @@
 
 刷盘时机
 
-##### 崩溃时如何恢复
+#### arise算法
 
 
 
