@@ -40,93 +40,51 @@
 
 
 
-## SQL
+
+
+
+
+
+
+
+## SQL的执行
 
 #### SQL解析
 
-#### SQL预处理
+从sql语句生成sql语法分析树
 
-#### SQL优化
+#### query processing
 
-#### SQL执行
+将语法分析树生成一个树状的查询计划，数据从树叶流向根，有三种模型
 
 ##### Processing Model
 
-+ Iterator Model
++ Iterator Model（火山模型，open next close）
 
-+ Materialization Model
++ Materialization Model（物化模型）
 
-+ Vectorization Model
++ Vectorized Model（向量化模型）
 
-##### Join Algorithms
+#### SQL优化
 
-+ Nested Loop Join
+##### 连接算法
 
-+ Sort Merge Join
+M个page，m个tuple 连接 N个page，n个tuple，3块磁盘
+
++ Simple Nested Loop Join
+
++ Block Nested Loop Join
+
++ Sort Merge Join：对整体不停n-1归并排序
 
 + Hash Join
 
+##### 优化
 
++ 越早过滤越多数据越好
 
-## TRANSACTION事务
++ 
 
-#### 分类
-
-+ 只读事务
-
-+ 读写事务
-
-#### 事务id分配时机
-
-#### ACID
-
-原子性、一致性、隔离性、持久性
-
-#### 四大隔离级别
-
-+ 读未提交
-
-+ 读已提交
-
-+ 可重复读
-
-+ 串行化
-
-
-
-#### MVCC
-
-#### RECOVERY
-
-##### REDU
-
-##### UNDO
-
-#### 锁
-
-##### 间隙锁
-
-##### 表锁
-
-##### 行锁
-
-#### 并发控制实现
-
-##### 2PL
-
-+ lock manager
-
-+ lock type
-
-+ 2PL
-
-+ Rigorous 2PL
-
-+ 死锁检测 检测wait_for_map
-
-+ 死锁预防 wait-die wound-wait
-
-+ hierarchical locking 防止锁过多
 
 
 
@@ -266,18 +224,27 @@ redo log可以被覆盖，意味着，该redo log对应的脏页，已经刷盘�
 
 + 如果非cache，则分配undo seg，将firstpage填入slot
 
+#### undo log删除时机
+
++ insert类型立马删除
+
++ update类型，当需要purge的时候，系统最早的readview的事务no若大于等于该history uodo log，则可以放心删除了
+
 ##### undo log buffer
 
 刷盘时机
-
-
-
 
 #### arise算法
 
 
 
+
+
+
+
 ## 事务
+
+#### ACID
 
 #### 事务并发执行的问题
 
@@ -330,9 +297,62 @@ redo log可以被覆盖，意味着，该redo log对应的脏页，已经刷盘�
 
 + 读已提交：每一次读取生成readview
 
-+ 可重复读：第一次读取生成readview
++ 可重复读：第一次读取生成readview（其实，按mvcc策略，它还能避免幻读）
 
 + 可串行化：加锁读取
+
+
+#### 锁
+
+##### 共享锁和排他锁
+
+##### 全局锁
+
+锁住整个数据库
+
+##### 表级锁
+
++ 表锁
+
++ 元数据锁
+
++ 意向锁
+
++ auto_inc锁
+
+##### 行级锁
+
++ record lock
+
++ gap lock
+
++ next-key lock
+
++ 隐式锁
+
+#### 当前读和快照读
+
+当前读：每次读取的都是最新数据，但是加锁
+
+快照读：按mvcc版本链读取数据
+
+
+
+##### 2PL
+
++ lock manager
+
++ lock type
+
++ 2PL
+
++ Rigorous 2PL
+
++ 死锁检测 检测wait_for_map
+
++ 死锁预防 wait-die wound-wait
+
+
 
 
 
