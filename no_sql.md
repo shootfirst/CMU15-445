@@ -11,11 +11,28 @@
 
 ##### quicklist
 
+已ziplist作为节点的链表
+
+##### ziplist
+
+bytes tail len entry ... end
+
+prelen encoding type content
+
 ##### listpack
+
+encoding data tol len
 
 ##### 整数集合
 
+ type len array
+
 ##### 哈希表
+
+两个哈希表
+
+渐近式哈希
+
 
 
 ### 内存淘汰策略
