@@ -7,22 +7,13 @@
 
 #### Bufferpool
 
-+ pagetable 哈希表
++ 控制块与缓冲页
 
-+ 预取
++ free链表
+
++ flush 链表
 
 + lru链表
-
-+ flush链表
-
-#### 使用磁盘文件来表示数据库的数据
-
-#### Data Storage Model
-
-+ NSM
-
-+ DSM
-
 
 
 
