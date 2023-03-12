@@ -46,9 +46,13 @@
 
 ##### 数据结构
 
+插入
+
 ![insert1](insert1.png)
 
 ![insert2](insert2.png)
+
+删除
 
 ![delete](delete.png)
 
